@@ -31,7 +31,7 @@ vector<vector<tuple<int, int>>> randomly_draw_generators(int M, int k, double be
     }
 
     int N = int(pow(M, 2*beta));
-    double L = pow(M, gamma);
+    double L = pow(sqrt(2)*M, gamma);
 
     while (int(gens.size()) < N) {
         const auto[cx, cy] = all_points[rand() % all_points.size()];
@@ -115,16 +115,16 @@ int main(int argc, char* argv[]) {
     // cout << rounds << endl;
 
 
-    int M = 10;
+    int M = 60;
     int k = 5;
     int no_test = 1000000;
     
     vector<double> betas;
-    for (int i = 1; i < 11; i++) {
+    for (int i = 7; i < 11; i++) {
         betas.push_back(i*0.1);
     }
     vector<double> gammas;
-    for (int i = 1; i < 11; i++) {
+    for (int i = 7; i < 11; i++) {
         gammas.push_back(i*0.1);
     }
 
@@ -143,9 +143,9 @@ int main(int argc, char* argv[]) {
                 vector<vector<tuple<int, int>>> gens = randomly_draw_generators(M, k, beta, gamma);
                 int rounds = grid.greedy_route_set(gens);
 
-                // if (rounds == -1) {
-                //     cout << "0" << endl;
-                //     cout << beta << " " << gamma << endl; 
+                if (rounds == -1) {
+                    cout << "0" << endl;
+                    cout << beta << " " << gamma << endl; 
 
                 //     for (size_t i = 0; i < gens.size(); i++) {
                 //         vector<tuple<int, int>> gen = gens[i];
@@ -154,10 +154,10 @@ int main(int argc, char* argv[]) {
                 //         }
                 //         cout << endl;
                 //     }
-                // }
+                }
                 // cout << rounds << endl;
                 if (rounds != -1) {
-                    res_ens.add_result(M, k, beta, gamma, 1,  rounds, 0);
+                    res_ens.add_result(M, k, beta, gamma, 1, rounds, 0);
                 }
             }
         }
