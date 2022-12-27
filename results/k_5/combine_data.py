@@ -7,13 +7,16 @@ ks = [5]
 full_path = os.path.realpath(__file__)
 path, filename = os.path.split(full_path)
 
+
+
 for k in ks:
     df = pd.read_csv(os.path.join(path, f'./k_{k}/iterative_tmp.res'), sep=',|\s+', engine='python')
     merged_df = pd.DataFrame(columns=df.columns)
     Ms = [10, 20, 30, 40, 50, 60, 70, 80, 90]
     betas = np.linspace(0.1, 1, 10)
     gammas = np.linspace(0.1, 1, 10)
-    for i, beta in enumerate(p_masks):
+    for i, beta in enumerate(betas):
+        for j, gammas in enumerate
         for t in range(t_max):
             ind = i*t_max + t
             tmp = df[(df['algo'] == t) & (df['p_mask'] == p)]

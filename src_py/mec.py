@@ -32,7 +32,7 @@ import math, random
 # Initially: No boundary points known
 def make_circle(points):
 	# Convert to double and randomize order
-	shuffled = [(double(x), double(y)) for (x, y) in points]
+	shuffled = [(float(x), float(y)) for (x, y) in points]
 	random.shuffle(shuffled)
 	
 	# Progressively add points to circle or recompute circle

@@ -298,3 +298,43 @@ int Grid::greedy_route_set(vector<vector<tuple<int, int>>> gens) {
 
     return -1;
 }
+
+
+int Grid::route_independent_sets(vector<vector<tuple<int, int>>> gens) {
+    // split the generators up into indepenent sets to be routed separately.
+    // each independent set can be routed in one round. Total time is thus number of independent sets
+
+    size_t orig_size = gens.size();
+    for (size_t rounds = 0; rounds < (orig_size + 1); rounds++) {
+        vector<vector<tuple<int, int>>> ind_set = {gens[0]};
+        gens.erase(begin(gens));
+
+        for (auto it = begin(gens); it != end(gens);) {
+            bool add = true;
+
+            for (auto it2 = begin(ind_set); it2 != end(ind_set); it2++) {
+                vector<tuple<int, int>> intersection;
+                set_intersection(begin(*it), end(*it),
+                               begin(*it2), end(*it2),
+                               back_inserter(intersection));
+
+                if (intersection.size()) {
+                    add = false;
+                }
+            }
+            
+            if (add) {
+                ind_set.push_back(*it);
+                it = gens.erase(it);
+            } else {
+                it++;
+            }
+        }
+
+        if (!gens.size()) {
+            return rounds+1;
+        }
+    }
+
+    return -1;
+}

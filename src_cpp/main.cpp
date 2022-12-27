@@ -2,6 +2,7 @@
 #include <cmath>
 #include <random>
 #include <string>
+#include <map>
 #include <fstream>
 #include "grid.h"
 #include "result.h"
@@ -31,7 +32,7 @@ vector<vector<tuple<int, int>>> randomly_draw_generators(int M, int k, double be
     }
 
     int N = int(pow(M, 2*beta));
-    double L = pow(sqrt(2)*M, gamma);
+    double L = sqrt(2)*pow(M, gamma);
 
     while (int(gens.size()) < N) {
         const auto[cx, cy] = all_points[rand() % all_points.size()];
@@ -48,6 +49,7 @@ vector<vector<tuple<int, int>>> randomly_draw_generators(int M, int k, double be
                 k,
                 mt19937{random_device{}()});
 
+            sort(begin(selected_points), end(selected_points));
             gens.push_back(selected_points);
         }
     }
@@ -57,74 +59,16 @@ vector<vector<tuple<int, int>>> randomly_draw_generators(int M, int k, double be
 
 
 int main(int argc, char* argv[]) {
-
-    // mat<int> ancillas = grid.get_ancillas();
-    // tuple<int, int> site1 = make_tuple(0,0);
-    // tuple<int, int> site2 = make_tuple(2,2);
-
-    // vector<tuple<int, int>> chain = grid.find_chain(ancillas, site1, site2);
-
-    // for (auto it = begin(chain); it != end(chain); it++) {
-    //     cout << get<0>(*it) << " " << get<1>(*it) << endl;
-    // }
-
-
-    // mat<int> ancillas = grid.get_ancillas();
-    // tuple<int, int> site1 = make_tuple(0,2);
-    // tuple<int, int> site2 = make_tuple(2,2);
-
-    // vector<tuple<int, int>> chain = grid.find_chain(ancillas, site1, site2);
-    // grid.add_chain(chain, 0);
-
-    // ancillas = grid.get_ancillas();
-    // site1 = make_tuple(0,0);
-    // site2 = make_tuple(0,4);
-
-    // chain = grid.find_chain(ancillas, site1, site2);
-    // grid.add_chain(chain, 0);
-    // grid.get_ancillas().print(std::cout);
-
-
-    // tuple<int, int> site1 = make_tuple(0,0);
-    // tuple<int, int> site2 = make_tuple(1,4);
-    // tuple<int, int> site3 = make_tuple(4,0);
-
-    // tuple<int, int> site4 = make_tuple(1,4);
-    // tuple<int, int> site5 = make_tuple(2,0);
-    // tuple<int, int> site6 = make_tuple(2,2);
-    // vector<vector<tuple<int, int>>> gens = {{site1, site2, site3}, {site4, site5, site6}};
-
-    // for (size_t i = 0; i < chains.size(); i++) {
-    //     vector<tuple<int, int>> chain = chains[i];
-    //     for (auto it = begin(chain); it != end(chain); it++) {
-    //         cout << "(" << get<0>(*it) << " " << get<1>(*it) << ")";
-    //     }
-    //     cout << endl;
-    // }
-    
-
-    // vector<vector<tuple<int, int>>> gens = randomly_draw_generators(M, k, 0.3, 1);
-    // for (size_t i = 0; i < gens.size(); i++) {
-    //     vector<tuple<int, int>> gen = gens[i];
-    //     for (auto it = begin(gen); it != end(gen); it++) {
-    //         cout << "(" << get<0>(*it) << " " << get<1>(*it) << ")";
-    //     }
-    //     cout << endl;
-    // }
-    // int rounds = grid.greedy_route_set(gens);
-    // cout << rounds << endl;
-
-
-    int M = 60;
-    int k = 5;
-    int no_test = 1000000;
+    int M = stoi(argv[1]);
+    int k = stoi(argv[2]);
+    int no_test = 1;
     
     vector<double> betas;
-    for (int i = 7; i < 11; i++) {
+    for (int i = 10; i < 11; i++) {
         betas.push_back(i*0.1);
     }
     vector<double> gammas;
-    for (int i = 7; i < 11; i++) {
+    for (int i = 0; i < 1; i++) {
         gammas.push_back(i*0.1);
     }
 
@@ -141,12 +85,32 @@ int main(int argc, char* argv[]) {
 
                 Grid grid(M, k+1);
                 vector<vector<tuple<int, int>>> gens = randomly_draw_generators(M, k, beta, gamma);
-                int rounds = grid.greedy_route_set(gens);
 
-                if (rounds == -1) {
-                    cout << "0" << endl;
-                    cout << beta << " " << gamma << endl; 
 
+                map<tuple<int, int>, int> counts;
+
+                for (size_t i = 0; i < gens.size(); i++) {
+                    for (tuple<int, int> qbt : gens[i]) {
+                        counts[qbt]++;
+                    }
+                }
+
+                for (const auto& [qbt, count] : counts) {
+                    cout << "(" << get<0>(qbt) << " " << get<1>(qbt) << "): " << count << endl;
+                }
+                // for (size_t i = 0; i < gens.size(); i++) {
+                //     vector<tuple<int, int>> gen = gens[i];
+                //     for (auto it = begin(gen); it != end(gen); it++) {
+                //         cout << "(" << get<0>(*it) << " " << get<1>(*it) << ")";
+                //     }
+                //     cout << endl;
+                // }
+
+                // int rounds = grid.greedy_route_set(gens);
+                // int rounds = grid.route_independent_sets(gens);
+                // if (rounds == -1) {
+                //     cout << "0" << endl;
+                //     cout << beta << " " << gamma << endl; 
                 //     for (size_t i = 0; i < gens.size(); i++) {
                 //         vector<tuple<int, int>> gen = gens[i];
                 //         for (auto it = begin(gen); it != end(gen); it++) {
@@ -154,14 +118,15 @@ int main(int argc, char* argv[]) {
                 //         }
                 //         cout << endl;
                 //     }
-                }
-                // cout << rounds << endl;
-                if (rounds != -1) {
-                    res_ens.add_result(M, k, beta, gamma, 1, rounds, 0);
-                }
+                // }
+
+
+                // if (rounds != -1) {
+                //     res_ens.add_result(M, k, beta, gamma, 1, rounds, 0);
+                // }
             }
         }
-        res_ens.to_file(res_file_name);
+        // res_ens.to_file(res_file_name);
     }
 
     return 0;

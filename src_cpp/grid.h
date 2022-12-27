@@ -21,6 +21,7 @@ class Grid {
         void perform_syndrome_measurements();
         vector<vector<tuple<int, int>>> route_generator(vector<tuple<int, int>> gen, tuple<int, int> prior_dest=make_tuple(-1, -1));
         int greedy_route_set(vector<vector<tuple<int, int>>> gens);
+        int route_independent_sets(vector<vector<tuple<int, int>>> gens);
         const mat<int>& get_ancillas();
 
     private:
