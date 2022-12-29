@@ -44,8 +44,8 @@ class Grid:
             return []
 
         while queue:
-            y, x = queue.pop(0)
-            if ((y, x) == qSite2):
+            x, y = queue.pop(0)
+            if ((x, y) == qSite2):
                 
                 curr_site = qSite2
                 chain = [curr_site]
@@ -55,16 +55,16 @@ class Grid:
                     chain.append(curr_site)
                 return chain[::-1]
 
-            if (((y, x) != qSite1) and (grid[y][x] < 2)):
+            if (((x, y) != qSite1) and (grid[x][y] < 2)):
                 continue
-            pot_nbrs = [(y+1, x), (y-1, x), (y, x+1), (y, x-1)]
+            pot_nbrs = [(x, y+1), (x, y-1), (x+1, y), (x-1, y)]
             for nbr in pot_nbrs:
-                new_y, new_x = nbr
+                new_x, new_y = nbr
                 if ((0 <= new_x < self.N) and (0 <= new_y < self.N)):
-                    if (not visited[new_y][new_x]):
-                        parent[new_y][new_x] = (y, x)
+                    if (not visited[new_x][new_y]):
+                        parent[new_x][new_y] = (x, y)
                         queue.append(nbr)
-                        visited[new_y][new_x] = True
+                        visited[new_x][new_y] = True
         
         return []
 
@@ -72,11 +72,11 @@ class Grid:
     def add_chain(self, chain, gen):
         # can assume that the path parameter is valid, i.e. there are enough ancillas available
         for i, pair in enumerate(chain):
-            y, x = pair
+            x, y = pair
             if ((i == 0) or (i == len(chain)-1)):
-                self.grid[y][x] -= 1
+                self.grid[x][y] -= 1
             else:
-                self.grid[y][x] -= 2
+                self.grid[x][y] -= 2
 
         self.full_chains[gen].append(chain)
 
@@ -88,7 +88,7 @@ class Grid:
             for _, chain in enumerate(self.full_chains[gen.key]):
                 for _, pair in enumerate(chain[1:len(chain)-1]):
                     y, x = pair
-                    self.grid[y][x] += 2
+                    self.grid[x][y] += 2
                 self.bell_pairs[gen.key].append([chain[0], chain[-1]])
 
             self.full_chains[gen.key] = []
@@ -99,14 +99,14 @@ class Grid:
         for _, gen in enumerate(self.generators):
             if (not gen.qbts_to_route):
                 # free readout qubit
-                y, x = gen.dest
-                self.grid[y][x] += 1
+                x, y = gen.dest
+                self.grid[x][y] += 1
 
                 # free bell pairs
                 for _, pair in enumerate(self.bell_pairs[gen.key]):
                     for _, qbt in enumerate(pair):
-                        y, x = qbt
-                        self.grid[y][x] += 1
+                        x, y = qbt
+                        self.grid[x][y] += 1
                 
                 self.bell_pairs[gen.key] = []
 
@@ -115,11 +115,11 @@ class Grid:
     def tmp_add_chain(grid, chain):
         # performs add chain on a provided ancilla grid
         for i, pair in enumerate(chain):
-            y, x = pair
+            x, y = pair
             if ((i == 0) or (i == len(chain)-1)):
-                grid[y][x] -= 1
+                grid[x][y] -= 1
             else:
-                grid[y][x] -= 2
+                grid[x][y] -= 2
 
 
     def print_grid(self):

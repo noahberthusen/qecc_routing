@@ -9,8 +9,8 @@ Grid::Grid(int inp_N, int inp_k) {
     in_progress = new mat<int>(N, N, 0);
 
     vector<Generator> generators;
-    vector<vector<vector<tuple<int, int>>>> full_chains;
-    vector<vector<tuple<tuple<int, int>, tuple<int, int>>>> bell_pairs;
+    vector<vector<vector<Point>>> full_chains;
+    vector<vector<tuple<Point, Point>>> bell_pairs;
 }
 
 Grid::~Grid() {
@@ -23,50 +23,50 @@ const mat<int>& Grid::get_ancillas() {
     return *ancillas;
 }
 
-vector<tuple<int, int>> Grid::find_chain(const mat<int>& grid, tuple<int, int> site1, tuple<int, int> site2) {
+vector<Point> Grid::find_chain(const mat<int>& grid, Point site1, Point site2) {
     mat<bool> visited(N, N, false);
-    mat<tuple<int,int>> parent(N, N, make_tuple(-1, -1));
-    deque<tuple<int, int>> queue = {site1};
-    visited(get<0>(site1), get<1>(site1)) = true;
+    mat<Point> parent(N, N, Point());
+    deque<Point> queue = {site1};
+    visited(site1.x, site1.y) = true;
 
-    if ((grid(get<0>(site1), get<1>(site1)) <= 0) || 
-        (grid(get<0>(site2), get<1>(site2)) <= 0)) {
+    if ((grid(site1.x, site1.y) <= 0) || 
+        (grid(site2.x, site2.y) <= 0)) {
         return {};
     }
 
     while (queue.size()) {
-        tuple<int, int> curr_site = queue.front();
-        const auto[y, x] = curr_site;
+        Point curr_site = queue.front();
+        int x = curr_site.x, y = curr_site.y;
         queue.pop_front();
 
         if (curr_site == site2) {
             // for (int i = 0; i < N; i++) {
             //     for (int j = 0; j < N; j++) {
-            //         tuple<int, int> site = parent(i, j);
+            //         Point site = parent(i, j);
             //         cout << "(" << get<0>(site) << "," << get<1>(site) << ")";
             //     }
             //     cout << endl;
             // }
-            vector<tuple<int, int>> chain = {curr_site};
+            vector<Point> chain = {curr_site};
             while (curr_site != site1) {
-                curr_site = parent(get<0>(curr_site), get<1>(curr_site));
+                curr_site = parent(curr_site.x, curr_site.y);
                 chain.insert(begin(chain), curr_site);
             }
             return chain;
         }
 
-        if ((curr_site != site1) && (grid(y, x) < 2)) { 
+        if ((curr_site != site1) && (grid(x, y) < 2)) { 
             continue; 
         }
-        vector<tuple<int, int>> pot_nbrs = { make_tuple(y+1, x), make_tuple(y-1, x), make_tuple(y, x+1), make_tuple(y, x-1) };
+        vector<Point> pot_nbrs = { Point(x, y+1), Point(x, y-1), Point(x+1, y), Point(x-1, y) };
         for (auto it = begin(pot_nbrs); it != end(pot_nbrs); it++) {
-            const auto[new_y, new_x] = *it;
+            int new_x = (*it).x, new_y = (*it).y;
 
             if ((0 <= new_x && new_x < N) && (0 <= new_y && new_y < N)) {
-                if (!visited(new_y, new_x)) {
-                    parent(new_y, new_x) = curr_site;
+                if (!visited(new_x, new_y)) {
+                    parent(new_x, new_y) = curr_site;
                     queue.push_back(*it);
-                    visited(new_y, new_x) = true;
+                    visited(new_x, new_y) = true;
                 }
             }
         }
@@ -76,41 +76,41 @@ vector<tuple<int, int>> Grid::find_chain(const mat<int>& grid, tuple<int, int> s
     return {};
 }
 
-void Grid::add_chain(vector<tuple<int, int>> chain, int gen) {
+void Grid::add_chain(vector<Point> chain, int gen) {
     for (size_t i = 0; i < chain.size(); i++) {
-        const auto[y, x] = chain[i];
+        int x = chain[i].x, y = chain[i].y;
         if ((i == 0) || (i == (chain.size() - 1))) {
-            (*ancillas)(y, x) = (*ancillas)(y, x) - 1;
+            (*ancillas)(x, y) = (*ancillas)(x, y) - 1;
         } else {
-            (*ancillas)(y, x) = (*ancillas)(y, x) - 2;
+            (*ancillas)(x, y) = (*ancillas)(x, y) - 2;
         }
     }
     full_chains[gen].push_back(chain);
 }
 
-void Grid::tmp_add_chain(mat<int>& grid, vector<tuple<int, int>> chain) {
+void Grid::tmp_add_chain(mat<int>& grid, vector<Point> chain) {
     for (size_t i = 0; i < chain.size(); i++) {
-        const auto[y, x] = chain[i];
+        int x = chain[i].x, y = chain[i].y;
         if ((i == 0) || (i == (chain.size() - 1))) {
-            grid(y, x) = grid(y, x) - 1;
+            grid(x, y) = grid(x, y) - 1;
         } else {
-            grid(y, x) = grid(y, x) - 2;
+            grid(x, y) = grid(x, y) - 2;
         }
     }
 }
 
 void Grid::perform_bell_measurement() {
     for (size_t i = 0; i < generators.size(); i++) {
-        vector<vector<tuple<int, int>>> gen_chains = full_chains[generators[i].get_key()];
+        vector<vector<Point>> gen_chains = full_chains[generators[i].get_key()];
         for (size_t j = 0; j < gen_chains.size(); j++) {
-            vector<tuple<int, int>> chain = gen_chains[j];
+            vector<Point> chain = gen_chains[j];
             for (size_t k = 1; k < (chain.size() - 1); k++) {
-                const auto[y, x] = chain[k];
-                (*ancillas)(y, x) = (*ancillas)(y, x) + 2;
+                int x = chain[k].x, y = chain[k].y;
+                (*ancillas)(x, y) = (*ancillas)(x, y) + 2;
             }
             bell_pairs[generators[i].get_key()].push_back(make_tuple(chain[0], chain[chain.size()-1]));
         } 
-        full_chains[generators[i].get_key()] = vector<vector<tuple<int, int>>>();
+        full_chains[generators[i].get_key()] = vector<vector<Point>>();
     }
 }
 
@@ -118,54 +118,53 @@ void Grid::perform_syndrome_measurements() {
     for (size_t i = 0; i < generators.size(); i++) {
         Generator gen = generators[i];
         if (gen.is_done()) {
-            const auto[y, x] = gen.get_dest();
-            (*ancillas)(y, x) = (*ancillas)(y, x) + 1;
+            int x = gen.get_dest().x, y = gen.get_dest().y;
+            (*ancillas)(x, y) = (*ancillas)(x, y) + 1;
 
-            vector<tuple<tuple<int, int>, tuple<int, int>>> pairs = bell_pairs[gen.get_key()];
+            vector<tuple<Point, Point>> pairs = bell_pairs[gen.get_key()];
             for (size_t j = 0; j < pairs.size(); j++) {
                 const auto[qbt1, qbt2] = pairs[j];
-                const auto[y1, x1] = qbt1;
-                (*ancillas)(y1, x1) = (*ancillas)(y1, x1) + 1;
-                const auto[y2, x2] = qbt2;
-                (*ancillas)(y2, x2) = (*ancillas)(y2, x2) + 1;
+                int x1 = qbt1.x, y1 = qbt1.y;
+                (*ancillas)(x1, y1) = (*ancillas)(x1, y1) + 1;
+                int x2 = qbt2.x, y2 = qbt2.y;
+                (*ancillas)(x2, y2) = (*ancillas)(x2, y2) + 1;
             }
 
-            bell_pairs[gen.get_key()] = vector<tuple<tuple<int, int>, tuple<int, int>>>();
+            bell_pairs[gen.get_key()] = vector<tuple<Point, Point>>();
         }
     }
 }
 
-vector<vector<tuple<int, int>>> Grid::route_generator(vector<tuple<int, int>> gen, tuple<int, int> prior_dest) {
-    bool is_prior_dest = (prior_dest != make_tuple(-1, -1));
-    vector<vector<vector<tuple<int, int>>>> out = {};
-    vector<tuple<int, int>> possible_dests = gen;
+vector<vector<Point>> Grid::route_generator(vector<Point> gen, Point prior_dest) {
+    bool is_prior_dest = (prior_dest != Point());
+    vector<vector<vector<Point>>> out = {};
+    vector<Point> possible_dests = gen;
     if (is_prior_dest) {
         possible_dests = {prior_dest};
     }
 
     for (size_t i = 0; i < possible_dests.size(); i++) {
-        tuple<int, int> dest = possible_dests[i];
-        const auto[y, x] = dest;
+        Point dest = possible_dests[i];
+        int x = dest.x, y = dest.y;
 
         // prevent gridlock, could have parameter turning this off
-        if (!is_prior_dest && ((*in_progress)(y, x))) continue;
+        if (!is_prior_dest && ((*in_progress)(x, y))) continue;
 
         mat<int> tmp_grid = get_ancillas();
-        vector<vector<tuple<int, int>>> chains = {};
-        vector<tuple<int, int>> routed_qbts = {};
+        vector<vector<Point>> chains = {};
+        vector<Point> routed_qbts = {};
         size_t tot_len = 0;
 
         // dest is the meeting site
         if (!is_prior_dest) {
-            tmp_grid(y, x) = tmp_grid(y, x) - 1;
+            tmp_grid(x, y) = tmp_grid(x, y) - 1;
         }
 
         for (size_t j = 0; j < gen.size(); j++) {
-            tuple<int, int> site = gen[j];
+            Point site = gen[j];
             
-
-            if ((dest != site) && (!(*dests)(get<0>(site), get<1>(site)))) {
-                vector<tuple<int, int>> chain = find_chain(tmp_grid, dest, site);
+            if ((dest != site) && (!(*dests)(site.x, site.y))) {
+                vector<Point> chain = find_chain(tmp_grid, dest, site);
                 if (chain.size()) {
                     tmp_add_chain(tmp_grid, chain);
                     chains.push_back(chain);
@@ -174,14 +173,12 @@ vector<vector<tuple<int, int>>> Grid::route_generator(vector<tuple<int, int>> ge
                 } else continue;
             }
         }
-
-
         out.push_back(chains);
     }
 
      if (!is_prior_dest) {
         stable_sort(begin(out), end(out), []
-            (const vector<vector<tuple<int, int>>>& lhs, const vector<vector<tuple<int, int>>>& rhs) {
+            (const vector<vector<Point>>& lhs, const vector<vector<Point>>& rhs) {
                 if (lhs.size() < rhs.size()) return false;
                 if (rhs.size() < lhs.size()) return true;
 
@@ -200,11 +197,11 @@ vector<vector<tuple<int, int>>> Grid::route_generator(vector<tuple<int, int>> ge
     }
 
     // for (size_t i = 0; i < out.size(); i++) {
-    //     vector<vector<tuple<int, int>>> chains = out[i];
+    //     vector<vector<Point>> chains = out[i];
     //     for (size_t j = 0; j < chains.size(); j++) {
-    //         vector<tuple<int, int>> chain = chains[j];
+    //         vector<Point> chain = chains[j];
     //         for (auto it = begin(chain); it != end(chain); it++) {
-    //             cout << "(" << get<0>(*it) << " " << get<1>(*it) << ")";
+    //             cout << "(" << (*it).x << " " << (*it).y << ")";
     //         }
     //         cout << endl;
     //     }
@@ -220,12 +217,12 @@ vector<vector<tuple<int, int>>> Grid::route_generator(vector<tuple<int, int>> ge
     }
 }
 
-int Grid::greedy_route_set(vector<vector<tuple<int, int>>> gens) {
+int Grid::greedy_route_set(vector<vector<Point>> gens) {
     for (size_t i = 0; i < gens.size(); i++) {
         if (int(gens[i].size()) > k) return 0;
 
-        full_chains.push_back(vector<vector<tuple<int, int>>>());
-        bell_pairs.push_back(vector<tuple<tuple<int, int>, tuple<int, int>>>());
+        full_chains.push_back(vector<vector<Point>>());
+        bell_pairs.push_back(vector<tuple<Point, Point>>());
 
         Generator gen(gens[i], i);
         generators.push_back(gen);
@@ -241,26 +238,26 @@ int Grid::greedy_route_set(vector<vector<tuple<int, int>>> gens) {
 
         for (size_t i = 0; i < generators.size(); i++) {
             Generator &gen = generators[i];
-            vector<vector<tuple<int, int>>> chains = route_generator(gen.get_qbts_to_route(), gen.get_dest());
+            vector<vector<Point>> chains = route_generator(gen.get_qbts_to_route(), gen.get_dest());
 
             if (chains.size()) {
-                if (gen.get_dest() == make_tuple(-1, -1)) {
-                    tuple<int, int> dest = chains[0][0];
-                    const auto[y, x] = dest;
+                if (gen.get_dest() == Point()) {
+                    Point dest = chains[0][0];
+                    int x = dest.x, y = dest.y;
                     gen.set_dest(dest);
-                    (*ancillas)(y, x) = (*ancillas)(y, x) - 1;
-                    (*dests)(y, x) = true;
+                    (*ancillas)(x, y) = (*ancillas)(x, y) - 1;
+                    (*dests)(x, y) = true;
                     gen.route_qbt(dest);
 
-                    vector<tuple<int, int>> qbts = gen.get_qbts();
+                    vector<Point> qbts = gen.get_qbts();
                     for (size_t j = 0; j < qbts.size(); j++) {
-                        tuple<int, int> qbt = qbts[j];
-                        (*in_progress)(get<0>(qbt), get<1>(qbt)) = (*in_progress)(get<0>(qbt), get<1>(qbt)) + 1;
+                        Point qbt = qbts[j];
+                        (*in_progress)(qbt.x, qbt.y) = (*in_progress)(qbt.x, qbt.y) + 1;
                     }
                 }
 
                 for (size_t j = 0; j < chains.size(); j++) {
-                    vector<tuple<int, int>> chain = chains[j];
+                    vector<Point> chain = chains[j];
                     gen.route_qbt(chain[chain.size() - 1]);
                     add_chain(chain, gen.get_key());
                 }
@@ -276,13 +273,13 @@ int Grid::greedy_route_set(vector<vector<tuple<int, int>>> gens) {
         for (size_t i = 0; i < generators.size(); i++) {
             Generator gen = generators[i];
             if (gen.is_done()) {
-                tuple<int, int> dest = gen.get_dest();
-                (*dests)(get<0>(dest), get<1>(dest)) = false;
+                Point dest = gen.get_dest();
+                (*dests)(dest.x, dest.y) = false;
 
-                vector<tuple<int, int>> qbts = gen.get_qbts();
+                vector<Point> qbts = gen.get_qbts();
                 for (size_t j = 0; j < qbts.size(); j++) {
-                    tuple<int, int> qbt = qbts[j];
-                    (*in_progress)(get<0>(qbt), get<1>(qbt)) = (*in_progress)(get<0>(qbt), get<1>(qbt)) - 1;
+                    Point qbt = qbts[j];
+                    (*in_progress)(qbt.x, qbt.y) = (*in_progress)(qbt.x, qbt.y) - 1;
                 }
             }
         }
@@ -300,20 +297,20 @@ int Grid::greedy_route_set(vector<vector<tuple<int, int>>> gens) {
 }
 
 
-int Grid::route_independent_sets(vector<vector<tuple<int, int>>> gens) {
+int Grid::route_independent_sets(vector<vector<Point>> gens) {
     // split the generators up into indepenent sets to be routed separately.
     // each independent set can be routed in one round. Total time is thus number of independent sets
 
     size_t orig_size = gens.size();
     for (size_t rounds = 0; rounds < (orig_size + 1); rounds++) {
-        vector<vector<tuple<int, int>>> ind_set = {gens[0]};
+        vector<vector<Point>> ind_set = {gens[0]};
         gens.erase(begin(gens));
 
         for (auto it = begin(gens); it != end(gens);) {
             bool add = true;
 
             for (auto it2 = begin(ind_set); it2 != end(ind_set); it2++) {
-                vector<tuple<int, int>> intersection;
+                vector<Point> intersection;
                 set_intersection(begin(*it), end(*it),
                                begin(*it2), end(*it2),
                                back_inserter(intersection));
