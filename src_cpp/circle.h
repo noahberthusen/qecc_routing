@@ -13,7 +13,10 @@ class Circle {
     public:
         Circle(vector<Point> points);
         Circle(double cx, double cy, double r);
+        Circle();
         static bool is_in_circle(Circle c, Point p);
+        bool operator== (const Circle& c) const;
+        bool operator!= (const Circle& c) const;
         double cx, cy, r;
 
     private:

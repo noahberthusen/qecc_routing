@@ -14,10 +14,17 @@ Circle::Circle(vector<Point> points) {
     r = c.r;
 }
 
-Circle::Circle(double inp_cx, double inp_cy, double inp_r) {
-    cx = inp_cx;
-    cy = inp_cy;
-    r = inp_r;
+Circle::Circle(double inp_cx, double inp_cy, double inp_r) :
+    cx(inp_cx), cy(inp_cy), r(inp_r) {}
+
+Circle::Circle() : cx(-1), cy(-1), r(-1) {}
+
+bool Circle::operator== (const Circle& c) const {
+    return make_tuple(cx, cy, r) == make_tuple(c.cx, c.cy, c.r);
+}
+
+bool Circle::operator!= (const Circle& c) const {
+    return !Circle::operator==(c);
 }
 
 Circle Circle::make_circle_one_point(vector<Point> points, Point p) {

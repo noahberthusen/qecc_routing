@@ -1,5 +1,6 @@
 from Grid import Grid
 from itertools import chain
+from mec import make_circle
 
 import random
 import numpy as np

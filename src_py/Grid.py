@@ -19,6 +19,9 @@ class Grid:
 
     def __init__(self, N, k):
         # construct a NxN grid of sites each with k ancilla qubits
+        self.reset(N, k)
+
+    def reset(self, N, k):
         self.N = N
         self.k = k
         self.generators = []
@@ -87,7 +90,7 @@ class Grid:
         for _, gen in enumerate(self.generators):
             for _, chain in enumerate(self.full_chains[gen.key]):
                 for _, pair in enumerate(chain[1:len(chain)-1]):
-                    y, x = pair
+                    x, y = pair
                     self.grid[x][y] += 2
                 self.bell_pairs[gen.key].append([chain[0], chain[-1]])
 
@@ -123,7 +126,7 @@ class Grid:
 
 
     def print_grid(self):
-        for i in range(self.N):
+        for i in range(self.N-1, 0, -1):
             for j in range(self.N):
                 print(self.grid[i][j], end='')
             print()
@@ -180,11 +183,12 @@ class Grid:
         if (not prior_dest):
             out.sort(key=lambda x: (x["num"], -x["len"]), reverse=True)
 
-        for i in out:
-            for j in i["chains"]:
-                print(j)
-            print(".........")
-        print("+++++++++")
+        # print(out)
+        # for i in out:
+        #     for j in i["chains"]:
+        #         print(j)
+        #     print(".........")
+        # print("+++++++++")
         return out[0] if out else out
 
 
@@ -195,7 +199,7 @@ class Grid:
         # prioritize finishing a single generator
 
         rounds = 0
-
+        # self.reset(self.N, self.k)
         for i, qbts in enumerate(gens):
             if (len(qbts) > self.k):
                 print("Impossible to route") # possible if meeting at site in gen, if at external site impossible...
@@ -233,7 +237,7 @@ class Grid:
                     for chain in res["chains"]:
                         self.add_chain(chain, gen.key)
 
-                self.print_grid()
+                # self.print_grid()
             # print(sum([sum(row) for row in self.grid]) / (self.N**2 * (self.k + 1)))
 
             self.perform_bell_measurements()
@@ -243,7 +247,7 @@ class Grid:
                 if (not gen.qbts_to_route):
                     self.dests[gen.dest[0]][gen.dest[1]] = False
                     for qbt in gen.qbts:
-                            self.in_progress[qbt[0]][qbt[1]] -= 1
+                        self.in_progress[qbt[0]][qbt[1]] -= 1
             self.generators[:] = [gen for gen in self.generators if gen.qbts_to_route]
             rounds += 1
 
