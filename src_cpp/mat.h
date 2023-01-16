@@ -2,6 +2,7 @@
 #ifndef mat_H
 #define mat_H
 
+#include <vector>
 #include <iostream>
 using namespace std;
 
@@ -30,6 +31,9 @@ class mat{
     int get_no_rows() const;
     int get_no_cols() const;	
     int count_nonzero() const;
+
+    vector<int> where() const;
+    vector<int> where(int rowNo) const;
 
  private:
     int no_rows, no_cols;
@@ -205,6 +209,34 @@ int mat<T>::count_nonzero() const{
         }
     }
     return sum;
+}
+
+template<typename T>
+vector<int> mat<T>::where() const {
+    vector<int> inds;
+
+    for (int i = 0; i < no_rows; i++) {
+        for (int j = 0; j < no_cols; j++) {
+            if ((*this)(i,j)) {
+                inds.push_back(i);
+                break;
+            }
+        }
+    }
+    return inds;
+}
+
+template<typename T>
+vector<int> mat<T>::where(int ind) const {
+    vector<int> inds;
+
+    for (int j = 0; j < no_cols; j++) {
+        if ((*this)(ind,j)) {
+            inds.push_back(j);
+        }
+    }
+
+    return inds;
 }
 
 #endif

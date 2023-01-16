@@ -2,8 +2,13 @@
 #include <cmath>
 #include <random>
 #include <string>
+#include <numeric>
 #include <map>
+#include <algorithm>
+#include <chrono>
 #include <fstream>
+
+#include "circle.h"
 #include "grid.h"
 #include "result.h"
 
@@ -16,33 +21,121 @@ string generate_id() {
     return id;
 }
 
-bool in_circle(tuple<int, int> point, tuple<int, int, double> circle) {
-    const auto[x, y] = point;
-    const auto[cx, cy, r] = circle;
-    return sqrt(pow(x - cx, 2) + pow(y - cy, 2)) <= r;
-}
-
-vector<vector<tuple<int, int>>> randomly_draw_generators(int M, int k, double beta, double gamma) {
-    vector<vector<tuple<int, int>>> gens;
-    vector<tuple<int, int>> all_points;
+vector<vector<Point>> configuration_model(int M, int deg_v, int deg_c, double gamma) {
+    // can't have operators with only one qubit in them. breaks the algo, and is not realistic for the model
+    vector<Point> qbts;
     for (int i = 0; i < M; i++) {
         for (int j = 0; j < M; j++) {
-            all_points.push_back(make_tuple(i, j));
+            qbts.push_back(Point(i, j));
+        }
+    }
+    int N = pow(M, 2);
+    int num_checks = int(N*deg_v)/deg_c;
+    double r = sqrt(2)*pow(M/2, gamma);
+    int c_ind, v_ind;
+
+    vector<int> c_inds, v_inds;
+    vector<int> vs(N, deg_v);
+    vector<vector<Point>> ops(num_checks, vector<Point>());
+
+    vector<vector<int>> pot_qbts(num_checks, vector<int>());
+    for (int i = 0; i < num_checks; i++) {
+        for (int j = 0; j < N; j++) {
+            pot_qbts[i].push_back(j);
+        }
+        c_inds.push_back(i);
+    }
+
+    while (accumulate(vs.begin(), vs.end(), 0)) {       
+        if (c_inds.size()) {
+            c_ind = c_inds[rand() % c_inds.size()];
+        } else {
+            break;
+        }
+
+        v_inds = pot_qbts[c_ind];
+        v_ind = v_inds[rand() % v_inds.size()];
+        ops[c_ind].push_back(qbts[v_ind]);
+
+        if (int(ops[c_ind].size()) == deg_c) {
+            pot_qbts[c_ind].clear();
+            c_inds.erase(remove(begin(c_inds), end(c_inds), c_ind), end(c_inds));
+        } else {
+            pot_qbts[c_ind].erase(remove(begin(pot_qbts[c_ind]), 
+                                         end(pot_qbts[c_ind]), v_ind), 
+                                         end(pot_qbts[c_ind]));
+            if (!pot_qbts[c_ind].size())
+                c_inds.erase(remove(begin(c_inds), end(c_inds), c_ind), end(c_inds));
+        }
+
+        // for (int i = 0; i < N; i++) {
+        //     if ((*pot_qbts)(c_ind, i)) {
+        //         vector<Point> tmp_op(ops[c_ind]);
+        //         tmp_op.push_back(qbts[i]);
+        //         Circle circ = Circle(tmp_op);
+        //         if (circ.r > r) (*pot_qbts)(c_ind, i) = false;
+        //     }
+        // }
+
+        if (ops[c_ind].size() == 1) {
+            for (int i = 0; i < N; i++) {
+                if (ops[c_ind][0].distance(qbts[i]) > (1+gamma)*r) {
+                    pot_qbts[c_ind].erase(remove(begin(pot_qbts[c_ind]), 
+                                                 end(pot_qbts[c_ind]), i), 
+                                                 end(pot_qbts[c_ind]));
+                    if (!pot_qbts[c_ind].size())
+                        c_inds.erase(remove(begin(c_inds), end(c_inds), c_ind), end(c_inds));
+                } 
+            }
+        }
+        vs[v_ind]--;
+        if (!vs[v_ind]) {
+            for (int i = 0; i < num_checks; i++) {
+                pot_qbts[i].erase(remove(pot_qbts[i].begin(), 
+                    pot_qbts[i].end(), v_ind), pot_qbts[i].end());
+                if (!pot_qbts[i].size())
+                    c_inds.erase(remove(begin(c_inds), end(c_inds), i), end(c_inds));
+            }
+        }
+
+    }
+
+    for (auto it = begin(ops); it != end(ops);) {
+        if ((*it).size() == 1) {
+            it = ops.erase(it);
+        } else {
+            it++;
+        }
+    }
+
+    for (auto it = begin(ops); it != end(ops); it++) {
+        sort(begin(*it), end(*it));
+    }
+    return ops;
+}
+
+vector<vector<Point>> randomly_draw_generators(int M, int k, double beta, double gamma) {
+    vector<vector<Point>> gens;
+    vector<Point> all_points;
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < M; j++) {
+            all_points.push_back(Point(i, j));
         }
     }
 
     int N = int(pow(M, 2*beta));
-    double L = sqrt(2)*pow(M, gamma);
+    double L = sqrt(2)*pow(M/2, gamma);
 
     while (int(gens.size()) < N) {
-        const auto[cx, cy] = all_points[rand() % all_points.size()];
-        vector<tuple<int, int>> in_points;
+        Point point = all_points[rand() % all_points.size()];
+        int cx = point.x, cy = point.y;
+        vector<Point> in_points;
         for (size_t i = 0; i < all_points.size(); i++) {
-            if (in_circle(all_points[i], make_tuple(cx, cy, L))) in_points.push_back(all_points[i]);
+            if (Circle::is_in_circle(Circle(cx, cy, L), all_points[i])) in_points.push_back(all_points[i]);
         }
 
         if (int(in_points.size()) >= k) {
-            vector<tuple<int, int>> selected_points;
+            vector<Point> selected_points;
             sample(begin(in_points), 
                 end(in_points), 
                 back_inserter(selected_points),
@@ -57,12 +150,58 @@ vector<vector<tuple<int, int>>> randomly_draw_generators(int M, int k, double be
     return gens;
 }
 
+vector<vector<Point>> draw_from_distribution(int M, int k, double beta) {
+    // draws from an exponential distribution
+    vector<vector<Point>> gens;
+    vector<Point> all_points;
+    for (int i = 0; i < M; i++) {
+        for (int j = 0; j < M; j++) {
+            all_points.push_back(Point(i, j));
+        }
+    }
+
+    int a = 2;
+    auto f = [a](double x) { return a*exp(-a*x); };
+    auto f_inv = [a](double x) { return -log(x/a)/a; };
+    random_device rd; 
+    mt19937 gen(rd());
+    std::uniform_real_distribution<> dist(f(0), f(1)); 
+    int N = int(pow(M, 2*beta));
+
+    while (int(gens.size()) < N) {
+        double L = sqrt(2)*pow(M/2, f_inv(dist(gen)));
+
+        Point point = all_points[rand() % all_points.size()];
+        int cx = point.x, cy = point.y;
+        vector<Point> in_points;
+        for (size_t i = 0; i < all_points.size(); i++) {
+            if (Circle::is_in_circle(Circle(cx, cy, L), all_points[i])) in_points.push_back(all_points[i]);
+        }
+
+        if (int(in_points.size()) >= k) {
+            vector<Point> selected_points;
+            sample(begin(in_points), 
+                end(in_points), 
+                back_inserter(selected_points),
+                k,
+                mt19937{random_device{}()});
+
+            sort(begin(selected_points), end(selected_points));
+            gens.push_back(selected_points);
+        }
+    }
+
+    return gens;
+} 
+
 
 int main(int argc, char* argv[]) {
+    if (argc != 3) return 1;
     int M = stoi(argv[1]);
     int k = stoi(argv[2]);
     int no_test = 1;
     
+    // don't do beta = 1 with configuration model
     vector<double> betas;
     for (int i = 10; i < 11; i++) {
         betas.push_back(i*0.1);
@@ -77,42 +216,67 @@ int main(int argc, char* argv[]) {
     string res_file_name = string("../results/cpp_") + generate_id() + string(".res");
     ResultEnsemble res_ens;
 
+    vector<vector<vector<Point>>> all_gens(gammas.size(), vector<vector<Point>>());
+    vector<vector<Point>> gens;
+    
+    auto start = chrono::high_resolution_clock::now();
     for (int r = 0; r < no_test; r++) {
+        // if (r % int(pow(M,2)/2) == 0) {
+        //     for (size_t i = 0; i < gammas.size(); i++) {
+        //         all_gens[i] = configuration_model(M, k, k, gammas[i]);
+        //     }
+        // }
+
         for (size_t beta_ind = 0; beta_ind < betas.size(); beta_ind++) {
             double beta = betas[beta_ind];
             for (size_t gamma_ind = 0; gamma_ind < gammas.size(); gamma_ind++) {
                 double gamma = gammas[gamma_ind];
-
                 Grid grid(M, k+1);
-                vector<vector<tuple<int, int>>> gens = randomly_draw_generators(M, k, beta, gamma);
 
+                if (gens.size()) gens.clear();
 
-                map<tuple<int, int>, int> counts;
+                // sample(begin(all_gens[gamma_ind]), 
+                //     end(all_gens[gamma_ind]), 
+                //     back_inserter(gens),
+                //     int(pow(M, 2*beta)),
+                //     mt19937{random_device{}()});
+                gens = draw_from_distribution(M, k, beta);
+                // gens = randomly_draw_generators(M, k, beta, gamma);
 
-                for (size_t i = 0; i < gens.size(); i++) {
-                    for (tuple<int, int> qbt : gens[i]) {
-                        counts[qbt]++;
-                    }
-                }
+                // map<Point, int> counts;
 
-                for (const auto& [qbt, count] : counts) {
-                    cout << "(" << get<0>(qbt) << " " << get<1>(qbt) << "): " << count << endl;
-                }
                 // for (size_t i = 0; i < gens.size(); i++) {
-                //     vector<tuple<int, int>> gen = gens[i];
-                //     for (auto it = begin(gen); it != end(gen); it++) {
-                //         cout << "(" << get<0>(*it) << " " << get<1>(*it) << ")";
+                //     for (Point qbt : gens[i]) {
+                //         counts[qbt]++;
                 //     }
-                //     cout << endl;
                 // }
+
+                // for (const auto& [qbt, count] : counts) {
+                //     cout << "(" << qbt.x << " " << qbt.y << "): " << count << endl;
+                // }
+                // double sum = 0;
+                for (size_t i = 0; i < gens.size(); i++) {
+                    vector<Point> gen = gens[i];
+                    Circle c = Circle(gen);
+                    cout << c.r << endl;
+                    // for (auto it = begin(gen); it != end(gen); it++) {
+                    //     cout << "(" << (*it).x << " " << (*it).y << ")";
+                    // }
+                    // cout << endl;
+                }
+                // cout << sum/gens.size() << " " << sqrt(2)*pow(M/2, gamma);
+
+                // cout << endl;
 
                 // int rounds = grid.greedy_route_set(gens);
                 // int rounds = grid.route_independent_sets(gens);
+
+                // cout << rounds << endl;
                 // if (rounds == -1) {
                 //     cout << "0" << endl;
                 //     cout << beta << " " << gamma << endl; 
                 //     for (size_t i = 0; i < gens.size(); i++) {
-                //         vector<tuple<int, int>> gen = gens[i];
+                //         vector<Point> gen = gens[i];
                 //         for (auto it = begin(gen); it != end(gen); it++) {
                 //             cout << "(" << get<0>(*it) << " " << get<1>(*it) << ")";
                 //         }
@@ -129,5 +293,9 @@ int main(int argc, char* argv[]) {
         // res_ens.to_file(res_file_name);
     }
 
+    auto stop = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
+
+    cout << duration.count() << endl;
     return 0;
 }
