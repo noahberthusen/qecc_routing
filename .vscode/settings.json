@@ -47,6 +47,9 @@
         "xstddef": "cpp",
         "xstring": "cpp",
         "xtr1common": "cpp",
-        "xtree": "cpp"
+        "xtree": "cpp",
+        "chrono": "cpp",
+        "numeric": "cpp",
+        "ratio": "cpp"
     }
 }

@@ -6,30 +6,26 @@
 #include <algorithm>
 #include <tuple>
 #include "point.h"
+#include "circle.h"
 
 using namespace std;
 
 class Generator {
     public:
-        Generator(vector<Point> qbts, int i);
-        Generator(const Generator& gen);
-        ~Generator();
-        vector<Point> get_qbts_to_route() const;
-        void route_qbt(Point qbt);
-        int get_key() const;
-        void set_dest(Point new_dest);
-        Point get_dest() const;
-        size_t num_routed() const;
-        bool is_done() const;
-        vector<Point> get_qbts() const;
-        vector<Point> get_routed_qbts() const;
-
-    private:
-        int key;
+        int key, start, cycle;
         Point dest;
         vector<Point> all_qbts;
         vector<Point> qbts_to_route;
         vector<Point> routed;
+        Circle c;
+
+        Generator(vector<Point> qbts, int i);
+        Generator(const Generator& gen);
+        ~Generator();
+        void route_qbt(Point qbt);
+        size_t num_routed() const;
+        bool is_done() const;
+        void reset();
 };
 
 #endif

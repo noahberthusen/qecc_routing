@@ -8,7 +8,6 @@
 #include <chrono>
 #include <fstream>
 
-#include "circle.h"
 #include "grid.h"
 #include "result.h"
 
@@ -166,10 +165,13 @@ vector<vector<Point>> draw_from_distribution(int M, int k, double beta) {
     random_device rd; 
     mt19937 gen(rd());
     std::uniform_real_distribution<> dist(f(0), f(1)); 
+    // std::uniform_real_distribution<> dist(0, 1); 
+
     int N = int(pow(M, 2*beta));
 
     while (int(gens.size()) < N) {
         double L = sqrt(2)*pow(M/2, f_inv(dist(gen)));
+        // double L = sqrt(2)*pow(M/2, dist(gen));
 
         Point point = all_points[rand() % all_points.size()];
         int cx = point.x, cy = point.y;
@@ -193,6 +195,27 @@ vector<vector<Point>> draw_from_distribution(int M, int k, double beta) {
 
     return gens;
 } 
+
+double fn(int M) { 
+    // https://helloacm.com/c-function-to-compute-numerical-integral-using-function-pointers/
+    int a = 2;
+    auto dist = [a, M](double x) { 
+        return (a/(1-exp(-a)))*exp(-a*x)*pow(M,x);
+    };
+
+    double c = 1.85;
+    double d = 6.35;
+    double n = 1000; // increase this for more accurate integral
+    // double gamma = log2(r)/log2(M/2); 
+    double gamma = 0.5883925047211545;
+
+    double step = gamma / n; 
+    double area = 0.0;
+    for (int i = 0; i < n; i++) {
+        area += dist((i + 0.5) * step) * step;
+    }
+    return c*area + d;
+}
 
 
 int main(int argc, char* argv[]) {
@@ -220,6 +243,7 @@ int main(int argc, char* argv[]) {
     vector<vector<Point>> gens;
     
     auto start = chrono::high_resolution_clock::now();
+   
     for (int r = 0; r < no_test; r++) {
         // if (r % int(pow(M,2)/2) == 0) {
         //     for (size_t i = 0; i < gammas.size(); i++) {
@@ -241,6 +265,18 @@ int main(int argc, char* argv[]) {
                 //     int(pow(M, 2*beta)),
                 //     mt19937{random_device{}()});
                 gens = draw_from_distribution(M, k, beta);
+
+                for (auto it = begin(gens); it != end(gens);) {
+                    vector<Point> gen = *it;
+                    Circle c = Circle(gen);
+
+                    if (log2(c.r)/log2(M/2) > 0.5883925047211545) {
+                        it = gens.erase(it);
+                    } else {
+                        it++;
+                    }
+
+                }
                 // gens = randomly_draw_generators(M, k, beta, gamma);
 
                 // map<Point, int> counts;
@@ -255,20 +291,21 @@ int main(int argc, char* argv[]) {
                 //     cout << "(" << qbt.x << " " << qbt.y << "): " << count << endl;
                 // }
                 // double sum = 0;
-                for (size_t i = 0; i < gens.size(); i++) {
-                    vector<Point> gen = gens[i];
-                    Circle c = Circle(gen);
-                    cout << c.r << endl;
-                    // for (auto it = begin(gen); it != end(gen); it++) {
-                    //     cout << "(" << (*it).x << " " << (*it).y << ")";
-                    // }
-                    // cout << endl;
-                }
+                // for (size_t i = 0; i < gens.size(); i++) {
+                //     vector<Point> gen = gens[i];
+                //     // Circle c = Circle(gen);
+                //     // cout << c.r << endl;
+                //     for (auto it = begin(gen); it != end(gen); it++) {
+                //         cout << "(" << (*it).x << " " << (*it).y << ")";
+                //     }
+                //     cout << endl;
+                // }
+                // cout << "............." << endl;
                 // cout << sum/gens.size() << " " << sqrt(2)*pow(M/2, gamma);
 
                 // cout << endl;
 
-                // int rounds = grid.greedy_route_set(gens);
+                grid.greedy_route_reccuring(gens, 50, fn(M));
                 // int rounds = grid.route_independent_sets(gens);
 
                 // cout << rounds << endl;
@@ -293,9 +330,40 @@ int main(int argc, char* argv[]) {
         // res_ens.to_file(res_file_name);
     }
 
+    // auto m_dist = [](Point p1, Point p2) { return abs(p1.x - p2.x) + abs(p1.y - p2.y); };
+
+    // for (M = 10; M < 201; M += 10) {
+    //     gens = draw_from_distribution(M, k, 1);
+
+    //     int tot_edges = 0;
+    //     for (int _ = 0; _ < no_test; _++) {
+    //         for (size_t i = 0; i < gens.size(); i++) {
+    //             for (int j = 1; j < k; j++) {
+    //                 tot_edges += m_dist(gens[i][0], gens[i][j]);
+    //             }
+    //         }
+    //     }
+    //     cout << M << "," << tot_edges/no_test << endl;
+    // }
+
+    // gens = draw_from_distribution(M, k, 1);
+
+    // int num_edges;
+    // for (size_t i = 0; i < gens.size(); i++) {
+    //     vector<Point> gen = gens[i];
+    //     Circle c = Circle(gen);
+        
+    //     num_edges = 0;
+    //     for (int j = 1; j < k; j++) {
+    //         num_edges += m_dist(gen[0], gen[j]);
+    //     }
+
+    //     cout << c.r << "," << num_edges << endl;
+
+    // }
     auto stop = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
 
-    cout << duration.count() << endl;
+    // cout << duration.count() << endl;
     return 0;
 }
