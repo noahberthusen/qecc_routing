@@ -36,20 +36,20 @@ class Grid:
         # this function checks to make sure that the intermediate sites have enough ancilla qubits
         # free to handle the Bell pair chain. Also checks endpoints of chain for one available ancilla
         # returns empty chain if impossible
-        
+
         visited = [[False for x in range(self.N)] for y in range(self.N)]
         parent = [[None for x in range(self.N)] for y in range(self.N)]
         queue = [qSite1]
         visited[qSite1[0]][qSite1[1]] = True
 
-        if ((grid[qSite1[0]][qSite1[1]] <= 0) or 
+        if ((grid[qSite1[0]][qSite1[1]] <= 0) or
             (grid[qSite2[0]][qSite2[1]] <= 0)):
             return []
 
         while queue:
             x, y = queue.pop(0)
             if ((x, y) == qSite2):
-                
+
                 curr_site = qSite2
                 chain = [curr_site]
 
@@ -68,7 +68,7 @@ class Grid:
                         parent[new_x][new_y] = (x, y)
                         queue.append(nbr)
                         visited[new_x][new_y] = True
-        
+
         return []
 
 
@@ -83,7 +83,7 @@ class Grid:
 
         self.full_chains[gen].append(chain)
 
-    
+
 
     def perform_bell_measurements(self):
         # goes through each of the full chains and creates long range bell pairs
@@ -110,7 +110,7 @@ class Grid:
                     for _, qbt in enumerate(pair):
                         x, y = qbt
                         self.grid[x][y] += 1
-                
+
                 self.bell_pairs[gen.key] = []
 
 
@@ -139,7 +139,7 @@ class Grid:
                 print(grid[i][j], end='')
             print()
         print()
-    
+
     def find_optimal_site():
         # geometric median
         pass
@@ -178,8 +178,8 @@ class Grid:
                     else:
                         continue
             out.append({"dest":dest, "chains":chains, "routed_qbts":routed_qbts, "num":len(routed_qbts), "len":tot_len})
-        
-        
+
+
         if (not prior_dest):
             out.sort(key=lambda x: (x["num"], -x["len"]), reverse=True)
 
@@ -204,7 +204,7 @@ class Grid:
             if (len(qbts) > self.k):
                 print("Impossible to route") # possible if meeting at site in gen, if at external site impossible...
                 return
-            
+
             self.full_chains[i] = []
             self.bell_pairs[i] = []
             self.generators.append(Generator(qbts, i))
@@ -270,4 +270,3 @@ class Grid:
                 return 0
         return tot_rounds
 
-        
