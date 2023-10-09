@@ -4,35 +4,42 @@ import itertools
 import galois
 from mec import make_circle
 from scipy.sparse import csr_matrix
+from scipy.stats import skew
 
 GF = galois.GF(2)
 
-def generate_quasi_cyclic_code(ell, m, As, Bs):
+def find_codes(code_params):
     def cyclic_shift_matrix(l):
         arr = np.eye(l, dtype=int)
         return np.roll(arr, axis=1, shift=1)
 
+    ell = code_params[0]
+    m = code_params[1]
+
     x = np.kron(cyclic_shift_matrix(ell), np.eye(m))
     y = np.kron(np.eye(ell), cyclic_shift_matrix(m))
 
-    A1 = matrix_power(x, As[0])
-    A2 = matrix_power(y, As[1])
-    A3 = matrix_power(y, As[2])
+    A1 = matrix_power(x, code_params[2])
+    A2 = matrix_power(y, code_params[3])
+    A3 = matrix_power(y, code_params[4])
     A = ( A1 + A2 + A3 ) % 2
 
-    B1 = matrix_power(y, Bs[0])
-    B2 = matrix_power(x, Bs[1])
-    B3 = matrix_power(x, Bs[2])
+    B1 = matrix_power(y, code_params[5])
+    B2 = matrix_power(x, code_params[6])
+    B3 = matrix_power(x, code_params[7])
     B = ( B1 + B2 + B3 ) % 2
 
     Hx = np.hstack([A, B]).astype(int)
     Hz = np.hstack([B.T, A.T]).astype(int)
-    # H = np.vstack([Hx, Hz])
-
+    k = 2 * (Hz.T.shape[1] - matrix_rank(GF(Hz.T)))
+    if (k < 8): return
 
     def has_toric_layout():
-        As = [A1 @ A2.T, A2 @ A3.T, A1 @ A3.T]  # A2 @ A3.T cycling up, A3 @ A2.T cycling up, etc.
-        Bs = [B1 @ B2.T, B2 @ B3.T, B1 @ B3.T]
+        # As = [A1 @ A2.T, A2 @ A3.T, A1 @ A3.T]  # A2 @ A3.T cycling up, A3 @ A2.T cycling up, etc.
+        # Bs = [B1 @ B2.T, B2 @ B3.T, B1 @ B3.T]
+        As = [A1 @ A2.T, A2 @ A1.T, A2 @ A3.T, A3 @ A2.T, A1 @ A3.T, A3 @ A1.T ]
+        Bs = [B1 @ B2.T, B2 @ B1.T, B2 @ B3.T, B3 @ B2.T, B1 @ B3.T, B3 @ B1.T]
+
 
         def has_toric_layout1():
             def order(arr):
@@ -41,8 +48,8 @@ def generate_quasi_cyclic_code(ell, m, As, Bs):
                         return i
                 return -1
 
-            Aorders = [order(As[0]), order(As[1]), order(As[2])]
-            Borders = [order(Bs[0]), order(Bs[1]), order(Bs[2])]
+            Aorders = [order(AA) for AA in As]
+            Borders = [order(BB) for BB in Bs]
 
             pot_orders = []
             for i, Ao in enumerate(Aorders):
@@ -51,8 +58,8 @@ def generate_quasi_cyclic_code(ell, m, As, Bs):
                         pot_orders.append((Ao,Bo,i,j))
             return pot_orders
 
-        def has_toric_layout2(pot_order):
-            emb_m, emb_ell, A_ind, B_ind = pot_order
+        def has_toric_layout2(pot_codes):
+            emb_m, emb_ell, A_ind, B_ind = pot_codes
 
             visited_qbts = set()
 
@@ -66,79 +73,105 @@ def generate_quasi_cyclic_code(ell, m, As, Bs):
 
             return len(visited_qbts) == ell*m
 
-        pot_orders = has_toric_layout1()
-        for pot_order in pot_orders:
-            if has_toric_layout2(pot_order):
-                return True
-        return False
+        confirmed_codes = []
+        pot_codes = has_toric_layout1()
+        for pot_code in pot_codes:
+            if has_toric_layout2(pot_code):
+                confirmed_codes.append(pot_code)
+        return confirmed_codes
 
+    confirmed_codes = has_toric_layout()
+    if (len(confirmed_codes) == 0): return
 
-    k = 2 * (Hz.T.shape[1] - matrix_rank(GF(Hz.T)))
-    print(2*ell*m, k, has_toric_layout2())
-    if (not k):
-        return
+    def embed_code(code, init):
+        emb_m, emb_ell, A_ind, B_ind = code
 
+        lattice = np.empty((2*emb_m, 2*emb_ell), dtype=object)
+        lattice[0][0] = f"x{init}"
 
-    # lattice = np.empty((2*m, 2*ell), dtype=object)
-    # lattice[0][0] = "x0"
+        # As = [[A1, A2.T], [A2, A3.T], [A1, A3.T]]
+        # Bs = [[B1, B2.T], [B2, B3.T], [B1, B3.T]]
+        As = [[A1, A2.T], [A2, A1.T], [A2, A3.T], [A3, A2.T], [A1, A3.T], [A3, A1.T]]
+        Bs = [[B1, B2.T], [B2, B1.T], [B2, B3.T], [B3, B2.T], [B1, B3.T], [B3, B1.T]]
 
-    # def get_nbr(i, j):
-    #     if (i % 2 == 0):
-    #         if (j % 2 == 0):
-    #             return "x"
-    #         else:
-    #             return "r"
-    #     else:
-    #         if (j % 2 == 0):
-    #             return "l"
-    #         else:
-    #             return "z"
+        def get_nbr(i, j):
+            if (i % 2 == 0):
+                if (j % 2 == 0):
+                    return "x"
+                else:
+                    return "r"
+            else:
+                if (j % 2 == 0):
+                    return "l"
+                else:
+                    return "z"
 
-    # for i in range(2*m - 1):
-    #     for j in range(2*ell):
-    #         curr_ind = int(lattice[i][j][1:])
+        for i in range(2*emb_m - 1):
+            for j in range(2*emb_ell):
+                curr_ind = int(lattice[i][j][1:])
 
-    #         if (i % 2 == 0):
-    #             tmp_A = A3.T
-    #         else:
-    #             tmp_A = A2
-    #         if (j % 2 == 0):
-    #             tmp_B = B3.T
-    #         else:
-    #             tmp_B = B2
+                if (i % 2 == 0):
+                    tmp_A = As[A_ind][1]
+                else:
+                    tmp_A = As[A_ind][0]
+                if (j % 2 == 0):
+                    tmp_B = Bs[B_ind][1]
+                else:
+                    tmp_B = Bs[B_ind][0]
 
-    #         lattice[(i+1)%(2*m)][j] = f"{get_nbr((i+1)%(2*m), j)}{np.where(tmp_A @ np.eye(m*ell)[int(lattice[i][j][1:])])[0][0]}"
-    #         lattice[i][(j+1)%(2*ell)] = f"{get_nbr(i, (j+1)%(2*ell))}{np.where(tmp_B @ np.eye(m*ell)[int(lattice[i][j][1:])])[0][0]}"
+                lattice[(i+1)%(2*emb_m)][j] = f"{get_nbr((i+1)%(2*emb_m), j)}{np.where(tmp_A @ np.eye(m*ell)[curr_ind])[0][0]}"
+                lattice[i][(j+1)%(2*emb_ell)] = f"{get_nbr(i, (j+1)%(2*emb_ell))}{np.where(tmp_B @ np.eye(m*ell)[curr_ind])[0][0]}"
 
-    # for i in range(2*m):
-    #     for j in range(2*ell):
-    #         if (lattice[i][j][0] == "z"):
-    #             lattice[i][j] = f"z{int(lattice[i][j][1:]) + m*ell}"
-    #         elif (lattice[i][j][0] == "r"):
-    #             lattice[i][j] = f"r{int(lattice[i][j][1:]) + m*ell}"
+        for i in range(2*emb_m):
+            for j in range(2*emb_ell):
+                if (lattice[i][j][0] == "z"):
+                    lattice[i][j] = f"z{int(lattice[i][j][1:]) + m*ell}"
+                elif (lattice[i][j][0] == "r"):
+                    lattice[i][j] = f"r{int(lattice[i][j][1:]) + m*ell}"
 
-    # qbts = np.array([None for i in range(2*m*ell)])
-    # for i in range(2*m):
-    #     for j in range(2*ell):
-    #         if lattice[i][j][0] == "r" or lattice[i][j][0] == "l":
-    #             qbts[int(lattice[i][j][1:])] = (i, j)
+        return lattice
 
-    # rs = []
-    # for i in range(m*ell):
-    #     gen_qbts = qbts[np.where(Hx[i])[0]]
-    #     rs.append(make_circle(gen_qbts)[2])
-    # for i in range(m*ell):
-    #     gen_qbts = qbts[np.where(Hz[i])[0]]
-    #     rs.append(make_circle(gen_qbts)[2])
+    for c,code in enumerate(confirmed_codes):
+        lattice = embed_code(code, 0)
 
-    # scaled_rs = [(r - min(rs)) / (max(rs) - min(rs)) for r in rs]
+        colors = np.empty(lattice.shape, dtype=object)
+        for i in range(lattice.shape[0]):
+            for j in range(lattice.shape[1]):
+                if lattice[i][j][0] == "x":
+                    colors[i][j] = "red"
+                elif lattice[i][j][0] == "r":
+                    colors[i][j] = "orange"
+                elif lattice[i][j][0] == "l":
+                    colors[i][j] = "blue"
+                else:
+                    colors[i][j] = "green"
 
-    # with open('results.txt', 'a') as file:
-    #     file.write(f'{2*ell*m},{k},{ell},{m},{A[0]},{A[1]},{A[2]},{B[0]},{B[1]},{B[2]},{sum(scaled_rs)}')
+        qbts = np.array([None for i in range(2*m*ell)])
+        for i in range(lattice.shape[0]):
+            for j in range(lattice.shape[1]):
+                if lattice[i][j][0] == "r" or lattice[i][j][0] == "l":
+                    qbts[int(lattice[i][j][1:])] = (i, j)
 
+        rs = []
+        for i in range(m*ell):
+            gen_qbts = qbts[np.where(Hx[i])[0]]
+            rs.append(make_circle(gen_qbts)[2])
+        for i in range(m*ell):
+            gen_qbts = qbts[np.where(Hz[i])[0]]
+            rs.append(make_circle(gen_qbts)[2])
 
-ell = 6
-m = 6
+        with open(f"codes/{code_params[0]}_{code_params[1]}.code", "a") as f:
+            f.write(f"{2*m*ell},{k},")
+            f.write(','.join(map(str, code_params)))
+            f.write(',')
+            f.write(','.join(map(str, code)))
+            f.write(f",{skew(rs)},{max(rs)-min(rs)}\n")
 
-for combination in itertools.product(range(m), repeat=3):
-    generate_quasi_cyclic_code(ell, m, combination, combination)
+m = 10
+ell = 36
+variables = range(1, max(m,ell))
+
+for i in range(100000):
+    combo = [np.random.randint(ell), np.random.randint(m), np.random.randint(m), np.random.randint(m), np.random.randint(ell), np.random.randint(ell)]
+    if ((combo[1] == combo[2]) or (combo[4] == combo[5])): continue
+    find_codes([ell,m] + combo)

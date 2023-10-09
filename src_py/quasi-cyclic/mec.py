@@ -1,23 +1,23 @@
-# 
+#
 # Smallest enclosing circle - Library (Python)
-# 
+#
 # Copyright (c) 2020 Project Nayuki
 # https://www.nayuki.io/page/smallest-enclosing-circle
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program (see COPYING.txt and COPYING.LESSER.txt).
 # If not, see <http://www.gnu.org/licenses/>.
-# 
+#
 
 import math, random
 
@@ -28,13 +28,13 @@ import math, random
 # Input: A sequence of pairs of doubles or ints, e.g. [(0,5), (3.1,-2.7)].
 # Output: A triple of doubles representing a circle.
 # Note: If 0 points are given, None is returned. If 1 point is given, a circle of radius 0 is returned.
-# 
+#
 # Initially: No boundary points known
 def make_circle(points):
 	# Convert to double and randomize order
 	shuffled = [(float(x), float(y)) for (x, y) in points]
 	random.shuffle(shuffled)
-	
+
 	# Progressively add points to circle or recompute circle
 	c = None
 	for (i, p) in enumerate(shuffled):
@@ -62,12 +62,12 @@ def _make_circle_two_points(points, p, q):
 	right = None
 	px, py = p
 	qx, qy = q
-	
+
 	# For each point not in the two-point circle
 	for r in points:
 		if is_in_circle(circ, r):
 			continue
-		
+
 		# Form a circumcircle and classify it on left or right side
 		cross = _cross_product(px, py, qx, qy, r[0], r[1])
 		c = make_circumcircle(p, q, r)
@@ -77,7 +77,7 @@ def _make_circle_two_points(points, p, q):
 			left = c
 		elif cross < 0.0 and (right is None or _cross_product(px, py, qx, qy, c[0], c[1]) < _cross_product(px, py, qx, qy, right[0], right[1])):
 			right = c
-	
+
 	# Select which circle to return
 	if left is None and right is None:
 		return circ
