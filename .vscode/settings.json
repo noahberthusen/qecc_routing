@@ -51,5 +51,6 @@
         "chrono": "cpp",
         "numeric": "cpp",
         "ratio": "cpp"
-    }
+    },
+    "svg.preview.background": "white"
 }

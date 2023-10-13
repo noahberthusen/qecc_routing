@@ -129,13 +129,13 @@ def test_code(code, res_file_name, num_iters):
             gen_qbts = qbts[np.where(Hx[i])[0]]
             x_rs.append(make_circle(gen_qbts)[2])
 
-
-        arr = []
-        for i, x in enumerate(x_rs):
-            if (x <= (min(x_rs))+np.std(x_rs)):
-                arr.append(x)
+        print(min(x_rs))
+        # arr = []
+        # for i, x in enumerate(x_rs):
+            # if (x <= (min(x_rs))+np.std(x_rs)):
+                # arr.append(x)
         # print(f"{sum(arr)/sum(x_rs)},", end="")
-        print(sum(arr)/sum(x_rs))
+        # print(sum(arr)/sum(x_rs))
 
         # return lattice
 
