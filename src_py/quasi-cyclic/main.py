@@ -5,8 +5,8 @@ import galois
 
 import sys
 sys.path.append("../../../../ldpc_masked2/src/")
-from ldpc import bp_decoder
-from ldpc.osd import bposd_decoder
+from ldpc_masked import bp_decoder
+from ldpc_masked.osd import bposd_decoder
 
 from result import Result, save_new_res, res_to_line
 
@@ -24,7 +24,7 @@ code = codes[1]
 
 
 # code = [30,6,19,2,3,1,24,11]
-code = [15,3,11,1,0,0,14,13]
+code = [15,3,3,2,1,0,2,1]
 
 
 def cyclic_shift_matrix(l):
@@ -51,8 +51,7 @@ Hx = np.hstack([A, B]).astype(int)
 Hz = np.hstack([B.T, A.T]).astype(int)
 
 x_mask = np.zeros(Hx.shape[0]).astype(np.uint8)
-# x_mask_inds = [0, 1, 2, 3, 4, 5, 18, 19, 20, 21, 22, 23, 36, 37, 38, 39, 40, 41, 66, 67, 68, 69, 70, 71, 84, 85, 86, 87, 88, 89, 132, 133, 134, 135, 136, 137, 150, 151, 152, 153, 154, 155]
-x_mask_inds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+x_mask_inds = [0, 1, 2, 39, 40, 41, 42, 43, 44]
 x_mask[x_mask_inds] = 1
 
 p = 0.001

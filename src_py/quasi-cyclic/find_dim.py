@@ -42,9 +42,9 @@ def test_code(code, res_file_name, num_iters):
     Hx = np.hstack([A, B]).astype(int)
     Hz = np.hstack([B.T, A.T]).astype(int)
 
-    # GF = galois.GF(2)
-    # k = 2 * (Hz.T.shape[1] - matrix_rank(GF(Hz.T)))
-    # print(f"{k},", end="")
+    GF = galois.GF(2)
+    k = 2 * (Hz.T.shape[1] - matrix_rank(GF(Hz.T)))
+    print(f"{k}")
 
 
     # if k > 4 or code['p_log'] > 0.98:
@@ -123,18 +123,31 @@ def test_code(code, res_file_name, num_iters):
             for j in range(lattice.shape[1]):
                 if lattice[i][j][0] == "r" or lattice[i][j][0] == "l":
                     qbts[int(lattice[i][j][1:])] = (i, j)
+        x_checks = np.array([None for i in range(m*ell)])
+        z_checks = np.array([None for i in range(m*ell)])
 
-        x_rs = []
-        for i in range(m*ell):
-            gen_qbts = qbts[np.where(Hx[i])[0]]
-            x_rs.append(make_circle(gen_qbts)[2])
+        for i in range(lattice.shape[0]):
+            for j in range(lattice.shape[1]):
+                if lattice[i][j][0] == "x":
+                    x_checks[int(lattice[i][j][1:])] = (i, j)
+                elif lattice[i][j][0] == "z":
+                    z_checks[int(lattice[i][j][1:])-(m*ell)] = (i, j)
 
-        print(min(x_rs))
+        # x_rs = []
+        # for i in range(m*ell):
+        #     gen_qbts = qbts[np.where(Hx[i])[0]]
+        #     x_rs.append(make_circle(gen_qbts)[2])
+        # #     coord = x_checks[i]
+        # #     s = 0
+        # #     for qbt in gen_qbts:
+        # #         s += (abs(coord[0]-qbt[0]) + abs(coord[1]-qbt[1]))
+        # #     # x_rs.append(make_circle(gen_qbts)[2])
+        # #     x_rs.append(s)
+        # # print(min(x_rs))
         # arr = []
         # for i, x in enumerate(x_rs):
-            # if (x <= (min(x_rs))+np.std(x_rs)):
-                # arr.append(x)
-        # print(f"{sum(arr)/sum(x_rs)},", end="")
+        #     if (x <= (min(x_rs))+np.std(x_rs)):
+        #         arr.append(x)
         # print(sum(arr)/sum(x_rs))
 
         # return lattice
