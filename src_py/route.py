@@ -146,16 +146,16 @@ r = Grid(30, 6, 2)
 
 # print_gens(30, 6, short_gens[:len(short_gens)//2], "x")
 
-gens = long_gens
+gens = short_gens
 for gen in sorted(gens[:len(gens)//2], key=lambda x: x[1]):
     print(gen)
     print_gens(30, 6, [gen], "x")
     print()
 
-for gen in sorted(gens[len(gens)//2:], key=lambda x: x[1]):
-    print(gen)
-    print_gens(30, 6, [gen], "z")
-    print()
+# for gen in sorted(gens[len(gens)//2:], key=lambda x: x[1]):
+#     print(gen)
+#     print_gens(30, 6, [gen], "z")
+#     print()
 # c = r.route_generator([(3, 6), (2, 11)], prior_dest=(2, 14))
 # print(c)
 # print(gens)
