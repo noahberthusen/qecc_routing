@@ -32,7 +32,7 @@ def find_codes(code_params):
     Hx = np.hstack([A, B]).astype(int)
     Hz = np.hstack([B.T, A.T]).astype(int)
     k = 2 * (Hz.T.shape[1] - matrix_rank(GF(Hz.T)))
-    if (k < 8): return
+    if (k <= 0): return
 
     def has_toric_layout():
         # As = [A1 @ A2.T, A2 @ A3.T, A1 @ A3.T]  # A2 @ A3.T cycling up, A3 @ A2.T cycling up, etc.
@@ -167,8 +167,8 @@ def find_codes(code_params):
             f.write(','.join(map(str, code)))
             f.write(f",{skew(rs)},{max(rs)-min(rs)}\n")
 
-m = 10
-ell = 36
+m = 3
+ell = 7
 variables = range(1, max(m,ell))
 
 for i in range(100000):
