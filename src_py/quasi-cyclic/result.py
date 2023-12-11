@@ -1,16 +1,17 @@
 import os.path
 
-column_names_for_simulation = "t,m,l,a1,a2,a3,b1,b2,b3,emb_m,emb_l,aa,bb,p_phys,p_mask,no_test,no_success,p_log"
+column_names_for_simulation = "t,k,l,m,a1,a2,a3,b1,b2,b3,emb_m,emb_l,aa,bb,adv,p_phys,p_mask,no_test,no_success,p_log"
 first_line = column_names_for_simulation + '\n'
 
 class Result:
-    def __init__(self,t,m,l,a1,a2,a3,b1,b2,b3,emb_m,emb_l,aa,bb,p_phys,p_mask,no_test,no_success):
-        if not (type(t) == int or type(m) == int or type(l) == int or\
+    def __init__(self,t,k,l,m,a1,a2,a3,b1,b2,b3,emb_m,emb_l,aa,bb,adv,p_phys,p_mask,no_test,no_success):
+        if not (type(t) == int or type(k) == int or type(m) == int or type(l) == int or\
                 type(a1) == int or type(a2) == int or type(a3) == int or type(b1) == int or type(b2) == int or type(b3) == int or\
-                type(emb_m) == int or type(emb_l) == int or type(aa) == int or type(bb) == int or\
+                type(emb_m) == int or type(emb_l) == int or type(aa) == int or type(bb) == int or type(adv) == float or\
                 type(p_phys) == float or type(p_mask) == float or type(no_test) == int or type(no_success) == int):
             raise NameError('Bad result format')
         self.t = t
+        self.k = k
         self.m = m
         self.l = l
         self.a1 = a1
@@ -23,6 +24,7 @@ class Result:
         self.emb_l = emb_l
         self.aa = aa
         self.bb = bb
+        self.adv = adv
         self.p_phys = p_phys
         self.p_mask = p_mask
         self.no_test = no_test
@@ -30,18 +32,18 @@ class Result:
 
 def res_to_line(r):
     p_log = r.no_success / r.no_test
-    line = str(r.t) + ',' + str(r.m) + ',' + str(r.l) + ',' +\
+    line = str(r.t) + ',' + str(r.k) + ',' + str(r.l) + ',' + str(r.m) + ',' +\
            str(r.a1) + ',' + str(r.a2) + ',' + str(r.a3) + ',' + str(r.b1) + ',' + str(r.b2) + ',' + str(r.b3) + ',' +\
-           str(r.emb_m) + ',' + str(r.emb_l) + ',' + str(r.aa) + ',' + str(r.bb) + ',' +\
+           str(r.emb_m) + ',' + str(r.emb_l) + ',' + str(r.aa) + ',' + str(r.bb) + ',' + str(r.adv) + ',' +\
            str(r.p_phys) + ',' + str(r.p_mask) + "," + str(r.no_test) + ',' + str(r.no_success) + ',' + str(p_log) + '\n'
     return line
 
 def line_to_res(line):
     tmp = line.strip('\n').split(',')
-    r = Result(int(tmp[0]),int(tmp[1]),int(tmp[2]),
-               int(tmp[3]),int(tmp[4]),int(tmp[5]),int(tmp[6]),int(tmp[7]),int(tmp[8]),
-               int(tmp[9]),int(tmp[10]),int(tmp[11]),int(tmp[12]),
-               float(tmp[13]),float(tmp[14]),int(tmp[15]),int(tmp[16]))
+    r = Result(int(tmp[0]),int(tmp[1]),int(tmp[2]),int(tmp[3]),
+               int(tmp[4]),int(tmp[5]),int(tmp[6]),int(tmp[7]),int(tmp[8]),int(tmp[9]),
+               int(tmp[10]),int(tmp[11]),int(tmp[12]),int(tmp[13]),float(tmp[14]),
+               float(tmp[15]),float(tmp[16]),int(tmp[17]),int(tmp[18]))
     return r
 
 # Creates a file whose lines are stored in lines_list
@@ -59,15 +61,15 @@ def create_file(file_name, lines_list):
 # It is possible to combine r1 and r2 when r1.algo == r2. algo and r1.dv == r2.dv and r1.dc == r2.dv and r1.nv == r2.nv and r1.nc == r2.nc and r1.code_id == r2.code_id and r1.p_phys == r2.p_phys
 # It returns None when it
 def combine_res(r1,r2):
-    if (r1.t == r2.t and r1.m == r2.m and r1.l == r2.l and\
+    if (r1.t == r2.t and r1.k == r2.k and r1.m == r2.m and r1.l == r2.l and\
         r1.a1 == r2.a1 and r1.a2 == r2.a2 and r1.a3 == r2.a3 and r1.b1 == r2.b1 and r1.b2 == r2.b2 and r1.b3 == r2.b3 and\
-        r1.emb_m == r2.emb_m and r1.emb_l == r2.emb_l and r1.aa == r2.aa and r1.bb == r2.bb and\
+        r1.emb_m == r2.emb_m and r1.emb_l == r2.emb_l and r1.aa == r2.aa and r1.bb == r2.bb and r1.adv == r2.adv and\
         r1.p_phys == r2.p_phys and r1.p_mask == r2.p_mask):
         no_test = r1.no_test + r2.no_test
         no_success = r1.no_success + r2.no_success
-        return Result(r1.t,r1.m,r1.l,
+        return Result(r1.t,r1.k,r1.l,r1.m,
                       r1.a1,r1.a2,r1.a3,r1.b1,r1.b2,r1.b3,
-                      r1.emb_m,r1.emb_l,r1.aa,r1.bb,
+                      r1.emb_m,r1.emb_l,r1.aa,r1.bb,r1.adv,
                       r1.p_phys,r1.p_mask,no_test,no_success)
     return None
 
