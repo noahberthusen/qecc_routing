@@ -620,7 +620,7 @@ def test_code_circuit(code):
 
 
 m = 3
-ell = 12
+ell = 13
 variables = range(1, max(m,ell))
 
 for i in range(100000):
