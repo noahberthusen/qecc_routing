@@ -39,7 +39,8 @@ def find_codes(code_params):
     Hx = np.hstack([A, B]).astype(int)
     Hz = np.hstack([B.T, A.T]).astype(int)
     k = 2 * (Hz.T.shape[1] - matrix_rank(GF(Hz.T)))
-    if (k < 8): return
+    if (k < 12): return
+    # if (k != 8): return
 
     def has_toric_layout():
         # As = [A1 @ A2.T, A2 @ A3.T, A1 @ A3.T]  # A2 @ A3.T cycling up, A3 @ A2.T cycling up, etc.
@@ -176,7 +177,7 @@ def find_codes(code_params):
         p_mask = np.round(np.count_nonzero(x_mask)/(m*ell), 3)
         adv = (1-p_mask) / (sum(x_rs[x_mask==0])/sum(x_rs))
         if (adv < 1.2): break
-        if (p_mask > 0.3): break
+        if (p_mask > 0.4): break
 
         codes_to_test.append(f"{2*m*ell},{k}," + ','.join(map(str, code_params)) + ',' + ','.join(map(str, code)) + f",{p_mask},{adv}")
 
@@ -232,7 +233,7 @@ def test_code(code):
     fail = 0
 
     for i in range(num_iters):
-        if fail > 1000:
+        if fail > 100:
             break
         for T in Ts:
             error = np.zeros(Hx.shape[1]).astype(np.uint8)
@@ -259,7 +260,7 @@ def test_code(code):
                             p, p_mask, 1, int(not np.any(error)))
             rs.append(res)
 
-    if fail < 1000:
+    if fail < 100:
         save_new_res(res_file_name, rs)
         return True
     return False
@@ -619,11 +620,12 @@ def test_code_circuit(code):
     save_new_res(res_file_name, rs)
 
 
-m = 3
-ell = 13
+m = 6
+ell = 12
 variables = range(1, max(m,ell))
 
 for i in range(100000):
+    if (i % 1000 == 0): print(".", end="")
     combo = [np.random.randint(ell+1), np.random.randint(m+1), np.random.randint(m+1), np.random.randint(m+1), np.random.randint(ell+1), np.random.randint(ell+1)]
     if ((combo[1] == combo[2]) or (combo[4] == combo[5])): continue
     res = find_codes([ell,m] + combo)
@@ -634,4 +636,4 @@ for i in range(100000):
         df = pd.DataFrame(data, columns=col_names)
         for index, row in df.iterrows():
             res2 = test_code(row)
-            if res2: test_code_circuit(row)
+            # if res2: test_code_circuit(row)
