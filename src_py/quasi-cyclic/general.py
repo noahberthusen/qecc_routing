@@ -10,32 +10,34 @@ from ldpc import bposd_decoder
 from result import Result, save_new_res, res_to_line
 from tqdm import tqdm
 
-full_path = os.path.realpath(__file__)
-path, filename = os.path.split(full_path)
-
-code = [12,3,9,1,2,0,1,11,3,12,2,0,11,6]
+# k = 8
+# code = [12,3,9,1,2,0,1,11,3,12,2,0,11,6]
 # code = [9,5,8,4,1,5,8,7,5,9,2,1,9,5]
 # code = [12,5,10,4,1,0,1,2,5,12,2,0,11,6]
-# code = [15,5,5,2,3,2,7,6,15,5,0,4,11,6]
-# code = [21,5,11,3,2,0,5,1,5,21,2,1,14,6]
-code = [18,5,11,1,4,5,10,17,5,18,2,2,12,8]
+#code = [15,5,5,2,3,2,7,6,15,5,0,4,11,6]
+# code = [30,3,25,3,1,3,22,13,3,30,3,4,11,9]
+
 
 # k = 12
-# code = [18,7,15,5,4,7,5,13,7,18,3,1,12,8]
-code = [12,6,9,5,4,3,7,2,12,6,0,5,14,10]
+#code = [14,7,6,5,6,0,4,13,7,14,0,2,12,8]
+# code = [18,6,3,4,5,3,7,2,6,18,1,4,16,15]
+# code = [12,6,3,1,2,3,1,2,12,6,1,4,16,15]
+
+code = [14,7,11,7,2,1,14,9,14,7,0,0,12,8]
 
 # k = 16
-# code = [15,5,5,4,1,5,11,12,15,5,1,5,12,8]
-# code = [15,5,10,3,2,0,9,7,5,15,3,4,20,15]
+# code = [15,5,10,3,2,0,9,7,5,15,3,4,16,15]
+# code = [15,9,0,5,4,3,13,6,9,15,2,0,16,15]
+#code = [30,5,5,3,2,5,3,29,5,30,3,4,17,15]
 
 # 0.001 error rate, all equal error
-muls001=np.array([0.,0.,1,0.,4.29574973,0.,3.72796993,0.,3.72677149,0.,3.89005214,0.,3.99232483,0.,4.06567307,0.,4.50056257,0.,4.34609584,0.,4.17703894,0.,4.67106587,0.,4.57802336,0.,4.62997696,0.,5.65038511,0.,5.27687367,0.,6.39057363,0.,5.62583295,0.,6.25768488,0.,7.30176588,0.,6.79337286,0.,7.34345098,0.,7.19368032,0.,7.85836973,0.,8.45210287,0.,8.09274835])
-probs=np.array([0.,0.,1,0.,0.98935,0.,0.98445,0.,0.9794,0.,0.97428,0.,0.96936,0.,0.96417,0.,0.95988,0.,0.95488,0.,0.94804,0.,0.94411,0.,0.93927,0.,0.93305,0.,0.93091,0.,0.92479,0.,0.92167,0.,0.91542,0.,0.91088,0.,0.90663,0.,0.90235,0.,0.89876,0.,0.89245,0.,0.89077,0.,0.88617,0.,0.8798])
+#muls001=np.array([0,0,1,0,4.29574973,0,3.72796993,0,3.72677149,0,3.89005214,0,3.99232483,0,4.06567307,0,4.50056257,0,4.34609584,0,4.17703894,0,4.67106587,0,4.57802336,0,4.62997696,0,5.65038511,0,5.27687367,0,6.39057363,0,5.62583295,0,6.25768488,0,7.30176588,0,6.79337286,0,7.34345098,0,7.19368032,0,7.85836973,0,8.45210287,0,8.09274835,0,9.94911087,0,10.61948935,0,9.64066608,0,11.52624589,0,11.23228934,0,12.38933908,0,12.30620952,0,13.33238861,0,13.93051327,0,13.33555394,0,14.56815817,0,15.26570976,0,15.89159447,0,15.75822076,0,17.44299357])
+#probs=np.array([0,0,1,0,0.98935,0,0.98445,0,0.9794,0,0.97428,0,0.96936,0,0.96417,0,0.95988,0,0.95488,0,0.94804,0,0.94411,0,0.93927,0,0.93305,0,0.93091,0,0.92479,0,0.92167,0,0.91542,0,0.91088,0,0.90663,0,0.90235,0,0.89876,0,0.89245,0,0.89077,0,0.88617,0,0.8798,0,0.87445,0,0.87104,0,0.86716,0,0.86585,0,0.85824,0,0.85396,0,0.85079,0,0.84681,0,0.84419,0,0.84061,0,0.83607,0,0.83324,0,0.82874,0,0.82687,0,0.82096])
 
 # 0.001 error rate, everything other than CNOT and measurement is 10x less
-# muls001 = np.array([0,0,1,0,2.83437563,0,2.71543645,0,2.66390109,0,2.47514626,0,2.63554603,0,2.8225308,0,3.20738319,0,3.05384743,0,3.01289603,0,3.30535152,0,3.46853617,0,3.30472058,0,3.34178504,0,3.69494846,0,3.74955935,0,3.89150943,0,4.29804057,0,4.622713,0,4.64298887,0,4.83355337,0,4.63747826,0,5.44062479,0,5.48444052,0,6.05625242])
-# probs = np.array([0,0,1,0,0.9914,0,0.98695,0,0.98352,0,0.97772,0,0.97513,0,0.97076,0,0.96652,0,0.96272,0,0.95921,0,0.953,0,0.95141,0,0.94713,0,0.94261,0,0.93912,0,0.93611,0,0.9328,0,0.92833,0,0.9237,0,0.92182,0,0.91651,0,0.91429,0,0.91166,0,0.9062,0,0.90485])
-idle_error = 0.0001
+muls001 = np.array([0,0,1,0,2.83437563,0,2.71543645,0,2.66390109,0,2.47514626,0,2.63554603,0,2.8225308,0,3.20738319,0,3.05384743,0,3.01289603,0,3.30535152,0,3.46853617,0,3.30472058,0,3.34178504,0,3.69494846,0,3.74955935,0,3.89150943,0,4.29804057,0,4.622713,0,4.64298887,0,4.83355337,0,4.63747826,0,5.44062479,0,5.48444052,0,6.05625242,0,5.75421291,0,6.06743327,0,6.63790984,0,6.33608196,0,7.24417597,0,6.69331914,0,7.44078094,0,7.59173345,0,8.37524776,0,8.38899217,0,8.80930114,0,9.80709627,0,8.87491589,0,9.62782511,0,9.85953381])
+probs = np.array([0,0,1,0,0.9914,0,0.98695,0,0.98352,0,0.97772,0,0.97513,0,0.97076,0,0.96652,0,0.96272,0,0.95921,0,0.953,0,0.95141,0,0.94713,0,0.94261,0,0.93912,0,0.93611,0,0.9328,0,0.92833,0,0.9237,0,0.92182,0,0.91651,0,0.91429,0,0.91166,0,0.9062,0,0.90485,0,0.90021,0,0.89659,0,0.89486,0,0.89014,0,0.88899,0,0.88297,0,0.87894,0,0.87727,0,0.87281,0,0.87138,0,0.86613,0,0.86468,0,0.86198,0,0.85793,0,0.85501])
+idle_error = 0.0002
 
 
 def cyclic_shift_matrix(l):
@@ -268,7 +270,7 @@ adv = sum(np.array(x_rs)[lr_x_checks]) / sum(x_rs)
 def measure_x_checks(checks, p, scale=False):
     c = stim.Circuit()
     c.append("H", [all_qbts[x_checks[x_check]] for x_check in checks])
-    c.append("DEPOLARIZE1", [all_qbts[x_checks[x_check]] for x_check in checks], p)
+    c.append("DEPOLARIZE1", [all_qbts[x_checks[x_check]] for x_check in checks], p/10)
     for x in checks:
         gen_qbts = qbts[np.where(Hx[x])[0]]
         for qbt in gen_qbts:
@@ -279,7 +281,7 @@ def measure_x_checks(checks, p, scale=False):
             else:
                 c.append("DEPOLARIZE2", path_qbts, p)
     c.append("H", [all_qbts[x_checks[x_check]] for x_check in checks])
-    c.append("DEPOLARIZE1", [all_qbts[x_checks[x_check]] for x_check in checks], p)
+    c.append("DEPOLARIZE1", [all_qbts[x_checks[x_check]] for x_check in checks], p/10)
     return c
 
 def measure_z_checks(checks, p, scale=False):
@@ -369,8 +371,8 @@ class Simulation:
         for i, x_check in enumerate(sr_x_checks):
             self.c.append("R", all_qbts[x_checks[x_check]])
 
-        if with_synd_noise: self.c.append("X_ERROR", [all_qbts[z_checks[z_check]] for z_check in sr_z_checks], 0.001)
-        if with_synd_noise: self.c.append("X_ERROR", [all_qbts[x_checks[x_check]] for x_check in sr_x_checks], 0.001)
+        if with_synd_noise: self.c.append("X_ERROR", [all_qbts[z_checks[z_check]] for z_check in sr_z_checks], 0.001/10)
+        if with_synd_noise: self.c.append("X_ERROR", [all_qbts[x_checks[x_check]] for x_check in sr_x_checks], 0.001/10)
 
 
     def lr_round(self, with_gate_noise=True, with_synd_noise=True):
@@ -401,8 +403,8 @@ class Simulation:
         for i, x_check in enumerate(all_x_checks):
             self.c.append("R", all_qbts[x_checks[x_check]])
 
-        if with_synd_noise: self.c.append("X_ERROR", [all_qbts[z_checks[z_check]] for z_check in all_z_checks], 0.001)
-        if with_synd_noise: self.c.append("X_ERROR", [all_qbts[x_checks[x_check]] for x_check in all_x_checks], 0.001)
+        if with_synd_noise: self.c.append("X_ERROR", [all_qbts[z_checks[z_check]] for z_check in all_z_checks], 0.001/10)
+        if with_synd_noise: self.c.append("X_ERROR", [all_qbts[x_checks[x_check]] for x_check in all_x_checks], 0.001/10)
 
 
     def simulate(self):
@@ -437,10 +439,10 @@ class Simulation:
 
 
 lr_time = 5
-res_file_name = os.path.join(path, f"./results/{ell}_{m}/full_circuit_results_laptop_{lr_time}.res")
+res_file_name = f"./results/{ell}_{m}/10xfull_circuit_results_{lr_time}_laptop.res"
 rs = []
 
-num_iters = 10001
+num_iters = 50001
 p_mask = len(lr_x_checks)/Hx.shape[0]
 
 for T in range(10, 11, 10):

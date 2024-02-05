@@ -39,8 +39,10 @@ def find_codes(code_params):
     Hx = np.hstack([A, B]).astype(int)
     Hz = np.hstack([B.T, A.T]).astype(int)
     k = 2 * (Hz.T.shape[1] - matrix_rank(GF(Hz.T)))
-    if (k < 12): return
+    # if (k < 12): return
     # if (k != 8): return
+    if (k != 16): return
+
 
     def has_toric_layout():
         # As = [A1 @ A2.T, A2 @ A3.T, A1 @ A3.T]  # A2 @ A3.T cycling up, A3 @ A2.T cycling up, etc.
@@ -74,10 +76,13 @@ def find_codes(code_params):
             ver = csr_matrix(As[A_ind])
             hor = csr_matrix(Bs[B_ind])
 
+            zero = np.zeros(m*ell)
+            zero[0] = 1
+
             for i in range(emb_m):
-                tmp_qbt = (ver**i)[0].indices[0] if i else 0
+                tmp_qbt = (ver**i) @ zero if i else zero
                 for j in range(emb_ell):
-                    visited_qbts |= {(hor**j)[tmp_qbt].indices[0] if j else tmp_qbt}
+                    visited_qbts |= {np.where((hor**j) @ tmp_qbt)[0][0] if j else np.where(tmp_qbt)[0][0]}
 
             return len(visited_qbts) == ell*m
 
@@ -176,7 +181,7 @@ def find_codes(code_params):
                 x_mask[i] = 1
         p_mask = np.round(np.count_nonzero(x_mask)/(m*ell), 3)
         adv = (1-p_mask) / (sum(x_rs[x_mask==0])/sum(x_rs))
-        if (adv < 1.2): break
+        # if (adv < 1.2): break
         if (p_mask > 0.4): break
 
         codes_to_test.append(f"{2*m*ell},{k}," + ','.join(map(str, code_params)) + ',' + ','.join(map(str, code)) + f",{p_mask},{adv}")
@@ -621,7 +626,7 @@ def test_code_circuit(code):
 
 
 m = 6
-ell = 12
+ell = 18
 variables = range(1, max(m,ell))
 
 for i in range(100000):
