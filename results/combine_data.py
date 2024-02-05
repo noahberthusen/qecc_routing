@@ -3,8 +3,8 @@ import numpy as np
 import os
 
 # type = "res_files_config"
-type = "res_files_random"
-# type = "res_files_dist/a_4"
+# type = "res_files_random"
+type = "res_files_dist/a_4"
 ks = [5]
 
 full_path = os.path.realpath(__file__)
@@ -19,7 +19,7 @@ for k in ks:
             df = pd.concat([df, pd.read_csv(os.path.join(path, f'./k_{k}/{type}/{file}'), sep=',|\s+', engine='python')])
     merged_df = []
 
-    Ms = np.linspace(10, 150, 15)
+    Ms = np.linspace(10, 200, 20)
     betas = np.linspace(0, 1, 11)
     gammas = np.linspace(0, 1, 11)
     for m in Ms:

@@ -12,7 +12,7 @@ using namespace std;
 
 class Grid {
     public:
-        Grid(int N, int k);
+        Grid(int M, int k);
         ~Grid();
         vector<Point> find_chain(const mat<int>& grid, Point site1, Point site2);
         void add_chain(vector<Point> chain, int gen);
@@ -24,11 +24,16 @@ class Grid {
         int route_independent_sets(vector<vector<Point>> gens);
         const mat<int>& get_ancillas();
 
+        // functions for adding generators back in
+        void greedy_route_reccuring(vector<vector<Point>> gens, int max_rounds, int restart);
+        void reset_generator(Generator& gen);
+
     private:
-        int N;
+        int M;
         int k;
 
         vector<Generator> generators;
+        vector<Generator> finished_gens;
         vector<vector<vector<Point>>> full_chains;
         vector<vector<tuple<Point, Point>>> bell_pairs;
 

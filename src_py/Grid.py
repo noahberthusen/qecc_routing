@@ -4,52 +4,53 @@ import numpy as np
 import copy
 
 class Generator:
-    def __init__(self, qbts, i):
+    def __init__(self, qbts, dest, i):
         # have to route all qubits. if dest in generator, then it's essentially a free route
         self.qbts = qbts
         self.key = i
         self.qbts_to_route = qbts.copy()
         self.routed = []
-        self.dest = None # could be in generator or not
+        self.dest = dest # could be in generator or not
 
 
 class Grid:
     # class that contains a grid of qubit (objects?), site objects perhaps containing data qubit and some number of ancillas
     # will be in charge of actual routing and generating sets to route
 
-    def __init__(self, N, k):
-        # construct a NxN grid of sites each with k ancilla qubits
-        self.reset(N, k)
+    def __init__(self, N, M, k):
+        # construct a MxN grid of sites each with k ancilla qubits
+        self.reset(N, M, k)
 
-    def reset(self, N, k):
+    def reset(self, N, M, k):
         self.N = N
+        self.M = M
         self.k = k
         self.generators = []
         self.full_chains = {}
         self.bell_pairs = {}
-        self.grid = [[k for _ in range(self.N)] for _ in range(self.N)]
-        self.dests = [[False for _ in range(self.N)] for _ in range(self.N)]
-        self.in_progress = [[0 for _ in range(self.N)] for _ in range(self.N)]
+        self.grid = [[k for _ in range(self.N)] for _ in range(self.M)]
+        self.dests = [[False for _ in range(self.N)] for _ in range(self.M)]
+        self.in_progress = [[0 for _ in range(self.N)] for _ in range(self.M)]
 
 
     def find_chain(self, grid, qSite1, qSite2):
         # this function checks to make sure that the intermediate sites have enough ancilla qubits
         # free to handle the Bell pair chain. Also checks endpoints of chain for one available ancilla
         # returns empty chain if impossible
-        
-        visited = [[False for x in range(self.N)] for y in range(self.N)]
-        parent = [[None for x in range(self.N)] for y in range(self.N)]
+
+        visited = [[False for x in range(self.N)] for y in range(self.M)]
+        parent = [[None for x in range(self.N)] for y in range(self.M)]
         queue = [qSite1]
         visited[qSite1[0]][qSite1[1]] = True
 
-        if ((grid[qSite1[0]][qSite1[1]] <= 0) or 
+        if ((grid[qSite1[0]][qSite1[1]] <= 0) or
             (grid[qSite2[0]][qSite2[1]] <= 0)):
             return []
 
         while queue:
             x, y = queue.pop(0)
             if ((x, y) == qSite2):
-                
+
                 curr_site = qSite2
                 chain = [curr_site]
 
@@ -63,12 +64,12 @@ class Grid:
             pot_nbrs = [(x, y+1), (x, y-1), (x+1, y), (x-1, y)]
             for nbr in pot_nbrs:
                 new_x, new_y = nbr
-                if ((0 <= new_x < self.N) and (0 <= new_y < self.N)):
+                if ((0 <= new_x < self.M) and (0 <= new_y < self.N)):
                     if (not visited[new_x][new_y]):
                         parent[new_x][new_y] = (x, y)
                         queue.append(nbr)
                         visited[new_x][new_y] = True
-        
+
         return []
 
 
@@ -83,7 +84,7 @@ class Grid:
 
         self.full_chains[gen].append(chain)
 
-    
+
 
     def perform_bell_measurements(self):
         # goes through each of the full chains and creates long range bell pairs
@@ -102,15 +103,15 @@ class Grid:
         for _, gen in enumerate(self.generators):
             if (not gen.qbts_to_route):
                 # free readout qubit
-                x, y = gen.dest
-                self.grid[x][y] += 1
+                # x, y = gen.dest
+                # self.grid[x][y] += 1
 
                 # free bell pairs
                 for _, pair in enumerate(self.bell_pairs[gen.key]):
                     for _, qbt in enumerate(pair):
                         x, y = qbt
                         self.grid[x][y] += 1
-                
+
                 self.bell_pairs[gen.key] = []
 
 
@@ -126,11 +127,16 @@ class Grid:
 
 
     def print_grid(self):
-        for i in range(self.N-1, 0, -1):
+        for i in range(self.M-1, -1, -1):
             for j in range(self.N):
                 print(self.grid[i][j], end='')
             print()
         print()
+
+    def set_available_ancillas(self, locs):
+        for loc in locs:
+            x,y = loc[0]
+            if loc[1] > self.k: self.grid[x][y] = loc[1]
 
     @staticmethod
     def tmp_print_grid(grid):
@@ -139,7 +145,7 @@ class Grid:
                 print(grid[i][j], end='')
             print()
         print()
-    
+
     def find_optimal_site():
         # geometric median
         pass
@@ -164,8 +170,8 @@ class Grid:
             tot_len = 0
 
             # dest is the meeting site
-            if (not prior_dest):
-                tmp_grid[dest[0]][dest[1]] -= 1
+            # if (not prior_dest):
+            #     tmp_grid[dest[0]][dest[1]] -= 1
 
             for _, site in enumerate(gen):
                 if ((dest != site) and (not self.dests[site[0]][site[1]])):
@@ -178,8 +184,7 @@ class Grid:
                     else:
                         continue
             out.append({"dest":dest, "chains":chains, "routed_qbts":routed_qbts, "num":len(routed_qbts), "len":tot_len})
-        
-        
+
         if (not prior_dest):
             out.sort(key=lambda x: (x["num"], -x["len"]), reverse=True)
 
@@ -200,35 +205,38 @@ class Grid:
 
         rounds = 0
         # self.reset(self.N, self.k)
+        # gens = sorted(gens, key=lambda x: len(x[0]), reverse=False)
+
         for i, qbts in enumerate(gens):
-            if (len(qbts) > self.k):
-                print("Impossible to route") # possible if meeting at site in gen, if at external site impossible...
-                return
-            
+            # if (len(qbts[0]) > self.k):
+            #     print("Impossible to route") # possible if meeting at site in gen, if at external site impossible...
+            #     return
+
             self.full_chains[i] = []
             self.bell_pairs[i] = []
-            self.generators.append(Generator(qbts, i))
+            self.generators.append(Generator(qbts[0], qbts[1], i))
 
         # random.shuffle(self.generators)
         for _ in range(len(gens) + 1):
             # attempt to route closest to being done first
-            # print(f"Round {_+1}: ")
+            # print(f"Round {_+1}: +++++++++++++++++++++++++++++ ")
             self.generators.sort(key=lambda x: len(x.routed), reverse=True)
 
             for gen in self.generators:
                 res = self.route_generator(gen.qbts_to_route, gen.dest)
+                print(res)
 
                 if (res and res["chains"]):
                     if (not gen.dest):
                         dest = res["dest"]
-                        self.grid[dest[0]][dest[1]] -= 1
+                        # self.grid[dest[0]][dest[1]] -= 1
                         self.dests[dest[0]][dest[1]] = True
                         gen.dest = dest
                         gen.qbts_to_route.remove(dest)
                         gen.routed.append(dest)
 
-                        for qbt in gen.qbts:
-                            self.in_progress[qbt[0]][qbt[1]] += 1
+                        # for qbt in gen.qbts:
+                        #     self.in_progress[qbt[0]][qbt[1]] += 1
 
                     for qbt in res["routed_qbts"]:
                         gen.qbts_to_route.remove(qbt)
@@ -237,7 +245,7 @@ class Grid:
                     for chain in res["chains"]:
                         self.add_chain(chain, gen.key)
 
-                # self.print_grid()
+                self.print_grid()
             # print(sum([sum(row) for row in self.grid]) / (self.N**2 * (self.k + 1)))
 
             self.perform_bell_measurements()
@@ -256,18 +264,17 @@ class Grid:
         return 0
 
 
-    def divided_greedy_route_set(self, gens, n):
-        def chunk(it, size):
-            it = iter(it)
-            return iter(lambda: tuple(islice(it, size)), ())
+    # def divided_greedy_route_set(self, gens, n):
+    #     def chunk(it, size):
+    #         it = iter(it)
+    #         return iter(lambda: tuple(islice(it, size)), ())
 
-        tot_rounds = 0
-        for gen_list in list(chunk(gens, n)):
-            rounds = self.greedy_route_set(gen_list)
-            if rounds:
-                tot_rounds += rounds
-            else:
-                return 0
-        return tot_rounds
+    #     tot_rounds = 0
+    #     for gen_list in list(chunk(gens, n)):
+    #         rounds = self.greedy_route_set(gen_list)
+    #         if rounds:
+    #             tot_rounds += rounds
+    #         else:
+    #             return 0
+    #     return tot_rounds
 
-        

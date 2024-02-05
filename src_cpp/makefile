@@ -10,7 +10,7 @@ main.o: main.cpp mat.h generator.h result.h circle.h
 grid.o: grid.cpp grid.h generator.h mat.h
 	$(CXX) $(CXXFLAGS) -c grid.cpp
 
-generator.o: generator.cpp generator.h point.h
+generator.o: generator.cpp generator.h point.h circle.h
 	$(CXX) $(CXXFLAGS) -c generator.cpp
 
 result.o: result.cpp result.h

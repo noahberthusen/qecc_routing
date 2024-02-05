@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import lmfit
 from scipy.optimize import curve_fit
 import os
 
@@ -29,16 +30,26 @@ for i, beta in enumerate(betas):
         if (2*beta + gamma >= 2):
             ax[9-i][j].set_facecolor('xkcd:salmon')
 
-            def fun(x, c, e):
-                return c*x**e
+            def fun(x, c, e, d):
+                return c*np.power(x, e) + d
             
-            popt, pcov = curve_fit(fun, tmp_df['m'], tmp_df['mean'])
-            ax[9-i][j].text(0.08, 0.7, round(popt[1], 2), transform=ax[9-i][j].transAxes)
-            # ax[10-i][j].text(0.4, 0.2, round(2*beta+gamma-2,2), transform=ax[10-i][j].transAxes)
+            model = lmfit.Model(fun)
+            params = lmfit.Parameters()
+            params.add('c', value=1, min=0, max=1e10)
+            params.add('e', value=0.5, min=0, max=1)
+            params.add('d', value=0, min=-10, max=10)
+            
+            result = model.fit(tmp_df['mean'], params, x=tmp_df['m'])
+            c = result.params["c"].value
+            e = result.params["e"].value
+            d = result.params["d"].value
+            # popt, pcov = curve_fit(fun, tmp_df['m'], tmp_df['mean'])
+            ax[9-i][j].text(0.08, 0.7, round(e, 2), transform=ax[9-i][j].transAxes)
+            ax[9-i][j].text(0.4, 0.2, round(2*beta+gamma-2,2), transform=ax[9-i][j].transAxes)
 
-            print(beta, gamma, popt, np.sqrt(np.diag(pcov))[1])
+            print(beta, gamma, c, e, d)
             xx = np.linspace(10, 120, 100)
-            yy = fun(xx, *popt)
+            yy = fun(xx, c, e, d)
             ax[9-i][j].plot(xx, yy, c='k')
         # ax[i][j].set_yscale('log')
 fig.supxlabel('Grid size')
