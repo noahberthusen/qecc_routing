@@ -45,6 +45,7 @@ plt.rcParams['axes.linewidth'] = 1
 
 fig, ax1 = plt.subplots(figsize=(5,2.2))
 
+red = [(181/255, 29/255, 20/255)]
 
 
 ax2 = ax1.twinx()
@@ -55,7 +56,7 @@ ax2.ticklabel_format(style='sci', axis='y', scilimits=(-3,-3))
 
 
 ax1.scatter(ts, probs, c='k', marker='.', label="Success prob")
-ax2.scatter(ts, muls001, c='r', marker='.', label="Bell fidelity")
+ax2.scatter(ts, muls001, c=red, marker='.', label="LR CNOT error rate")
 
 lines, labels = ax1.get_legend_handles_labels()
 lines2, labels2 = ax2.get_legend_handles_labels()

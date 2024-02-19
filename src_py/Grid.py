@@ -17,11 +17,11 @@ class Grid:
     # class that contains a grid of qubit (objects?), site objects perhaps containing data qubit and some number of ancillas
     # will be in charge of actual routing and generating sets to route
 
-    def __init__(self, N, M, k):
+    def __init__(self, M, N, k):
         # construct a MxN grid of sites each with k ancilla qubits
-        self.reset(N, M, k)
+        self.reset(M, N, k)
 
-    def reset(self, N, M, k):
+    def reset(self, M, N, k):
         self.N = N
         self.M = M
         self.k = k
@@ -59,7 +59,7 @@ class Grid:
                     chain.append(curr_site)
                 return chain[::-1]
 
-            if (((x, y) != qSite1) and (grid[x][y] < 2)):
+            if (((x, y) != qSite1) and (grid[x][y] < 1)):
                 continue
             pot_nbrs = [(x, y+1), (x, y-1), (x+1, y), (x-1, y)]
             for nbr in pot_nbrs:
@@ -77,13 +77,8 @@ class Grid:
         # can assume that the path parameter is valid, i.e. there are enough ancillas available
         for i, pair in enumerate(chain):
             x, y = pair
-            if ((i == 0) or (i == len(chain)-1)):
-                self.grid[x][y] -= 1
-            else:
-                self.grid[x][y] -= 2
-
+            self.grid[x][y] -= 1
         self.full_chains[gen].append(chain)
-
 
 
     def perform_bell_measurements(self):
@@ -92,7 +87,7 @@ class Grid:
             for _, chain in enumerate(self.full_chains[gen.key]):
                 for _, pair in enumerate(chain[1:len(chain)-1]):
                     x, y = pair
-                    self.grid[x][y] += 2
+                    self.grid[x][y] += 1
                 self.bell_pairs[gen.key].append([chain[0], chain[-1]])
 
             self.full_chains[gen.key] = []
@@ -102,10 +97,6 @@ class Grid:
         # performs syndrome measurement on any fully routed generators and frees their bell pairs (and extra readout ancilla)
         for _, gen in enumerate(self.generators):
             if (not gen.qbts_to_route):
-                # free readout qubit
-                # x, y = gen.dest
-                # self.grid[x][y] += 1
-
                 # free bell pairs
                 for _, pair in enumerate(self.bell_pairs[gen.key]):
                     for _, qbt in enumerate(pair):
@@ -123,11 +114,11 @@ class Grid:
             if ((i == 0) or (i == len(chain)-1)):
                 grid[x][y] -= 1
             else:
-                grid[x][y] -= 2
+                grid[x][y] -= 1
 
 
     def print_grid(self):
-        for i in range(self.M-1, -1, -1):
+        for i in range(self.M):
             for j in range(self.N):
                 print(self.grid[i][j], end='')
             print()
@@ -146,9 +137,6 @@ class Grid:
             print()
         print()
 
-    def find_optimal_site():
-        # geometric median
-        pass
 
     def route_generator(self, gen, prior_dest=None):
         # attempts to route a generator, if so returns chains and dest
@@ -204,8 +192,7 @@ class Grid:
         # prioritize finishing a single generator
 
         rounds = 0
-        # self.reset(self.N, self.k)
-        # gens = sorted(gens, key=lambda x: len(x[0]), reverse=False)
+        gens = sorted(gens, key=lambda x: len(x[0]), reverse=False)
 
         for i, qbts in enumerate(gens):
             # if (len(qbts[0]) > self.k):
@@ -224,12 +211,11 @@ class Grid:
 
             for gen in self.generators:
                 res = self.route_generator(gen.qbts_to_route, gen.dest)
-                print(res)
+                # print(res)
 
                 if (res and res["chains"]):
                     if (not gen.dest):
                         dest = res["dest"]
-                        # self.grid[dest[0]][dest[1]] -= 1
                         self.dests[dest[0]][dest[1]] = True
                         gen.dest = dest
                         gen.qbts_to_route.remove(dest)
@@ -245,9 +231,7 @@ class Grid:
                     for chain in res["chains"]:
                         self.add_chain(chain, gen.key)
 
-                self.print_grid()
-            # print(sum([sum(row) for row in self.grid]) / (self.N**2 * (self.k + 1)))
-
+            # self.print_grid()
             self.perform_bell_measurements()
             self.perform_syndrome_measurements()
 

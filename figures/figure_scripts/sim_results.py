@@ -8,20 +8,26 @@ full_path = os.path.realpath(__file__)
 path, filename = os.path.split(full_path)
 
 def plot_surface_data_10x(ax, d, k):
-    ts = [10,20,30,40,50,60,70,80,90,100]
+    ts = [10,15,20,25,30,35,40,45,50,55,60,65,70,75,80]
+
     data = {
-        4: [0.0016967997827119702,0.003402016706839705,0.005198668926927707,0.0067335891270339805,0.008392742225305262,0.01027328408686011,0.011971263226642999,0.013527128138307162,0.01520684710575034,0.016683987397106612],
-        5: [0.0002421,0.0004872,0.0007455185700232641,0.000980165804730726,0.0012480455641382937,0.0015226806337692088,0.0017767683810412786,0.0019690512209593098,0.0022846301472621397,0.0025904249236248385],
-        6: [0.0001106,0.0002313,0.0003442,0.0004811,0.0005975330650685207,0.0007399653945960564,0.0008404457938361405,0.0009608863284960162,0.0010484184363706642,0.0011759332829829865],
-        7: [2.19e-05,4.76e-05,7.18e-05,9.45e-05,0.0001207,0.0001476,0.0001668,0.0001929,0.0002263,0.0002524]
+        4 : [0.0016812,0.0025489,0.0033865,0.0042501,0.005075872203551685,0.005890609331292553,0.006775329147990811,0.007623126039106398,0.008449990198795465,0.009316634479898236,0.010100351027599614,0.010910404010550826,0.011730542378952338,0.012582637703544886,0.013414575945573883],
+        5: [0.0002328,0.0003646,0.0004877,0.0006244110640902478,0.000727458675529053,0.0008700268201796874,0.0010078452954527433,0.0011384220747020423,0.0012852489506495737,0.0014111965349456826,0.0015131452842902181,0.0016341289794200478,0.0017465836669805232,0.0018875359930499269,0.0020079426162348275],
+        6: [0.000115,0.0001742,0.0002347,0.0002891,0.000357,0.0004147,0.0004773,0.0005367770074793773,0.0005985242143951054,0.0006724841370966704,0.0007164854556718286,0.0007670300696188646,0.0008337658125202725,0.0008905651288221894,0.0009531508929132619],
+        7: [2.06e-05,3.22e-05,4.41e-05,6.07e-05,7.44e-05,9.24e-05,9.6e-05,0.0001048,0.0001281,0.0001325,0.000148,0.0001623,0.0001691,0.0001841,0.0001947]
     }
     labels  = {
-        4: '-o',
-        5: '-.o',
-        6: ':o',
-        7: '--o'
+        4: 'h',
+        5: 's',
+        6: 'D',
+        7: '^'
     }
-    ax.plot(ts[:8], [1-(1-a)**k for a in data[d]][:8], labels[d], c='k', label=f"Surface code: [[{d**2*k},{k},{d}]] ({(2*d**2-1)*k} qubits)")
+    ax.plot(ts, [1-(1-a)**k for a in data[d]], labels[d], c='k', markersize=4, label=f"Surface code: [[{d**2*k},{k},{d}]] ({(2*d**2-1)*k} qubits)")
+    popt, pcov = curve_fit(fun, ts, [1-(1-a)**k for a in data[d]], maxfev=1000, p0=(0.001))
+    print(d, k, popt)
+    xx = np.linspace(2, 80, 1000)
+    yy = fun(xx, *popt)
+    ax.plot(xx, yy, c='k', linewidth=0.75)
 
 def plot_surface_data(ax, d, k):
     ts = [10,20,30,40,50,60,70,80,90,100]
@@ -40,7 +46,12 @@ def plot_surface_data(ax, d, k):
     print([1-(1-a)**k for a in data[d]][:8])
     ax.plot(ts[:8], [1-(1-a)**k for a in data[d]][:8], labels[d], c='k', label=f"Surface code: [[{d**2*k},{k},{d}]] ({(2*d**2-1)*k} qubits)")
 
+
 x10 = True
+colors = [(0, 190, 255), (221, 179, 16), (0, 178, 93), (181, 29, 20), (64, 83, 211),  (251, 73, 176), ]
+# colors = [(239, 230, 69), (233, 53, 161), (0, 227, 255), (225, 86, 44), (83, 126, 255), (0, 203, 133)]
+# colors = [(86, 100, 26), (192, 175, 251), (230, 161, 118), (0, 103, 138), (152, 68, 100), (94, 204, 171)]
+colors = [(c[0]/255, c[1]/255, c[2]/255) for c in colors]
 
 plt.rc('font', family='serif')
 # plt.rcParams['xtick.direction'] = 'in'
@@ -50,9 +61,10 @@ plt.rcParams['axes.linewidth'] = 1
 fig, ax = plt.subplots(1, 3, figsize=(12,4), sharey=True)
 
 codes = [[12,3],[9,5],[12,5],[15,5]]#,[21,5]]
+ds = [6,6,8,8]
 # codes = [[14,7]]
 
-for code in codes:
+for i, code in enumerate(codes):
     if x10:
         df = pd.read_csv(os.path.join(path, f'../../src_py/quasi-cyclic/results/{code[0]}_{code[1]}/10xfull_circuit_results_5.res'))
     else:
@@ -66,14 +78,15 @@ for code in codes:
     def fun(x, a):
         return 1 - (1 - a)**x
 
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    # colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
     tmp_df = df[(df['p_std_dev'] > 0) & (df['p_phys'] == 0.0002) & (df['k'] == 8)]
 
-        # tmp_df_fit = df[(df['p_mask'] == j) & (df['algo'] >= 200)]
-        # tmp_df_before = df[(df['p_mask'] == j) & (df['algo'] < 200) & (df['algo'] > 10)]
-
-    ax[0].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', label=f"Quasi-cyclic: [[{code[0]*code[1]*2},8,d]] ({code[0]*code[1]*8} qubits)")
-# ax.plot(ts, p_error, '-o', c='k', label="Surface code: [[712,8,6]]")
+    ax[0].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', c=colors[i], markersize=5, label=f"Quasi-cyclic: [[{code[0]*code[1]*2},8,{ds[i]}]] ({code[0]*code[1]*8} qubits)")
+    popt, pcov = curve_fit(fun, tmp_df['t'], tmp_df['p_error'], maxfev=1000, p0=(0.001), sigma=tmp_df['p_std_dev'])
+    print(code, popt)
+    xx = np.linspace(2, 80, 1000)
+    yy = fun(xx, *popt)
+    ax[0].plot(xx, yy, c=colors[i], linewidth=0.75)
 
 if x10:
     plot_surface_data_10x(ax[0], 4, 8)
@@ -87,29 +100,17 @@ else:
     plot_surface_data(ax[0], 7, 8)
 
 
-# popt, pcov = curve_fit(fun, tmp_df['t'], tmp_df['p_error'], maxfev=1000, p0=(0.001),
-#     sigma=tmp_df['p_std_dev'])
-# xx = np.linspace(1, 100, 1000)
-# yy = fun(xx, *popt)
-# ax.plot(xx, yy, c='k')
-
-
-# ax.plot(np.linspace(0, 0.05, 100), np.linspace(1e-3, 50*1e-3, 100), c='k')
-# ax[1].plot(np.linspace(1e-3,1e-2,100), np.linspace(1e-3, 1e-2, 100), c='k')
-
-# ax.set_title('ISD with $p_0 = 0.001$')
-# ax[1].set_title('SSF with $k=1$')
-# ax.legend(loc='lower right')
 ax[0].set_yscale('log')
 ax[0].set_ylabel('Logical error rate, $p_\log$')
 ax[0].set_xlabel('Rounds, $t$')
-ax[0].legend(loc='upper center', bbox_to_anchor=(0.5,1.6), frameon=False)
-
+ax[0].legend(loc='upper center', bbox_to_anchor=(0.5,1.53), frameon=False, fontsize=9)
 
 
 codes = [[12,6],[14,7]]#,[18,6]]
+arr = [3,6]
+ds = [12,8]
 
-for code in codes:
+for i, code in enumerate(codes):
     if x10:
         df = pd.read_csv(os.path.join(path, f'../../src_py/quasi-cyclic/results/{code[0]}_{code[1]}/10xfull_circuit_results_5.res'))
     else:
@@ -123,15 +124,14 @@ for code in codes:
     def fun(x, a):
         return 1 - (1 - a)**x
 
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
-    tmp_df = df[(df['p_std_dev'] > 0) & (df['p_phys'] == 0.0002) & (df['k'] == 12)]
+    tmp_df = df[(df['p_std_dev'] > 0) & (df['p_phys'] == 0.0002) & (df['k'] == 12) & (df['a1'] == arr[i])]
 
-        # tmp_df_fit = df[(df['p_mask'] == j) & (df['algo'] >= 200)]
-        # tmp_df_before = df[(df['p_mask'] == j) & (df['algo'] < 200) & (df['algo'] > 10)]
-
-    ax[1].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', label=f"Quasi-cyclic: [[{code[0]*code[1]*2},12,d]] ({code[0]*code[1]*8} qubits)")
-# ax.plot(ts, p_error, '-o', c='k', label="Surface code: [[712,8,6]]")
-# plot_surface_data(ax, 4, 12)
+    ax[1].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], c=colors[i], markersize=5, fmt='o', label=f"Quasi-cyclic: [[{code[0]*code[1]*2},12,{ds[i]}]] ({code[0]*code[1]*8} qubits)")
+    popt, pcov = curve_fit(fun, tmp_df['t'], tmp_df['p_error'], maxfev=1000, p0=(0.001), sigma=tmp_df['p_std_dev'])
+    print(code, popt)
+    xx = np.linspace(2, 80, 1000)
+    yy = fun(xx, *popt)
+    ax[1].plot(xx, yy, c=colors[i], linewidth=0.75)
 
 if x10:
     plot_surface_data_10x(ax[1], 5, 12)
@@ -140,27 +140,13 @@ if x10:
 else:
     plot_surface_data(ax[1], 5, 12)
     plot_surface_data(ax[1], 6, 12)
-    plot_surface_data(ax[1], 7, 12)
+    # plot_surface_data(ax[1], 7, 12)
 
 
-# popt, pcov = curve_fit(fun, tmp_df['t'], tmp_df['p_error'], maxfev=1000, p0=(0.001),
-#     sigma=tmp_df['p_std_dev'])
-# xx = np.linspace(1, 100, 1000)
-# yy = fun(xx, *popt)
-# ax.plot(xx, yy, c='k')
 
-
-# ax.plot(np.linspace(0, 0.05, 100), np.linspace(1e-3, 50*1e-3, 100), c='k')
-# ax[1].plot(np.linspace(1e-3,1e-2,100), np.linspace(1e-3, 1e-2, 100), c='k')
-
-# ax.set_title('ISD with $p_0 = 0.001$')
-# ax[1].set_title('SSF with $k=1$')
-# ax.legend(loc='lower right')
 ax[1].set_yscale('log')
-# ax.set_ylabel('Logical error rate, $p_\log$')
 ax[1].set_xlabel('Rounds, $t$')
-ax[1].legend(loc='upper center', bbox_to_anchor=(0.5,1.55), frameon=False)
-# ax[1].set_xlabel('$p$')
+ax[1].legend(loc='upper center', bbox_to_anchor=(0.5,1.35), frameon=False, fontsize=9)
 
 # handles, labels = plt.gca().get_legend_handles_labels()
 # order = [3,2,1,0]
@@ -203,8 +189,10 @@ ax[1].legend(loc='upper center', bbox_to_anchor=(0.5,1.55), frameon=False)
 
 
 # codes = [[12,5],[12,5],[9,5],[9,5]]
-codes = [[14,7],[14,7],[9,5],[9,5]]
-
+codes = [[9,5],[9,5],[14,7],[14,7]]
+arr = [8,8,6,6]
+ds = [8,8,8,8]
+ks = [8,8,12,12]
 
 lr_round = [1,5,1,5]
 
@@ -223,34 +211,25 @@ for i, code in enumerate(codes):
     def fun(x, a):
         return 1 - (1 - a)**x
 
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
-    tmp_df = df[(df['p_std_dev'] > 0) & (df['p_phys'] == 0.0002)]
-
-        # tmp_df_fit = df[(df['p_mask'] == j) & (df['algo'] >= 200)]
-        # tmp_df_before = df[(df['p_mask'] == j) & (df['algo'] < 200) & (df['algo'] > 10)]
-
-    ax[2].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', label=f"Quasi-cyclic: [[{code[0]*code[1]*2},8,d]] (Every {lr_round[i]} round(s))")
+    tmp_df = df[(df['p_std_dev'] > 0) & (df['p_phys'] == 0.0002) & (df['a1'] == arr[i])]
 
 
-# popt, pcov = curve_fit(fun, tmp_df['t'], tmp_df['p_error'], maxfev=1000, p0=(0.001),
-#     sigma=tmp_df['p_std_dev'])
-# xx = np.linspace(1, 100, 1000)
-# yy = fun(xx, *popt)
-# ax.plot(xx, yy, c='k')
+    ax[2].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', c=colors[i], markersize=5, label=f"Quasi-cyclic: [[{code[0]*code[1]*2},{ks[i]},{ds[i]}]] (Every {lr_round[i]} round(s))")
+    popt, pcov = curve_fit(fun, tmp_df['t'], tmp_df['p_error'], maxfev=1000, p0=(0.001), sigma=tmp_df['p_std_dev'])
+    print(code, popt)
+    xx = np.linspace(2, 80, 1000)
+    yy = fun(xx, *popt)
+    ax[2].plot(xx, yy, c=colors[i], linewidth=0.75)
 
-
-# ax.plot(np.linspace(0, 0.05, 100), np.linspace(1e-3, 50*1e-3, 100), c='k')
-# ax[1].plot(np.linspace(1e-3,1e-2,100), np.linspace(1e-3, 1e-2, 100), c='k')
-
-# ax.set_title('ISD with $p_0 = 0.001$')
-# ax[1].set_title('SSF with $k=1$')
-# ax.legend(loc='lower right')
 ax[2].set_yscale('log')
-# ax.set_ylabel('Logical error rate, $p_\log$')
 ax[2].set_xlabel('Rounds, $t$')
-ax[2].legend(loc='upper center', bbox_to_anchor=(0.5,1.55), frameon=False)
+ax[2].legend(loc='upper center', bbox_to_anchor=(0.5,1.29), frameon=False, fontsize=9)
 
 # https://stackoverflow.com/questions/4700614/how-to-put-the-legend-outside-the-plot
 
+for i, label in enumerate(('(a)', '(b)', '(c)')):
+    # ax = fig.add_subplot(2,2,i+1)
+    ax[i].text(-0.05, 1.08, label, transform=ax[i].transAxes,
+      fontsize=14, va='top', ha='right')
 
 plt.savefig(os.path.join(path, f'../sim_results.png'), dpi=1000, transparent=False, bbox_inches='tight')

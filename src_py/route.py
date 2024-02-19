@@ -1,9 +1,16 @@
 from Grid import Grid
 from itertools import chain
-from mec import make_circle
-
-import random
 import numpy as np
+from numpy.linalg import matrix_power, matrix_rank
+import galois
+from mec import make_circle
+from scipy.sparse import csr_matrix
+import os
+import pandas as pd
+from ldpc import bposd_decoder
+import stim
+from scipy.sparse import lil_matrix
+import random
 
 # class Route:
 #     def __init__(self, N, M, k):
@@ -13,158 +20,275 @@ import numpy as np
 #         self.all_points = [(x,y) for x in range(M) for y in range(M)]
 #         self.grid = Grid(M, k+1)
 
-    # def randomly_draw_generators(self, beta, gamma):
-    #     def in_circle(point, circle):
-    #         x, y = point
-    #         cx, cy, r = circle
-    #         return np.sqrt((x - cx)**2 + (y - cy)**2) <= r
+#     def randomly_draw_generators(self, beta, gamma):
+#         def in_circle(point, circle):
+#             x, y = point
+#             cx, cy, r = circle
+#             return np.sqrt((x - cx)**2 + (y - cy)**2) <= r
 
-    #     gens = []
+#         gens = []
 
-    #     N = int(self.M**(2*beta))
-    #     L = np.sqrt(2)*(self.M**gamma)
-    #     while (len(gens) < N):
-    #         cx, cy = random.choice(self.all_points)
+#         N = int(self.M**(2*beta))
+#         L = np.sqrt(2)*(self.M**gamma)
+#         while (len(gens) < N):
+#             cx, cy = random.choice(self.all_points)
 
-    #         in_points = [point for point in self.all_points if in_circle(point, (cx, cy, L))]
+#             in_points = [point for point in self.all_points if in_circle(point, (cx, cy, L))]
 
-    #         if (len(in_points) >= self.k):
-    #             points = random.sample(in_points, self.k)
-    #             gens.append(points)
+#             if (len(in_points) >= self.k):
+#                 points = random.sample(in_points, self.k)
+#                 gens.append(points)
 
-    #     return gens
+#         return gens
 
-    # def configuration_model():
-    #     m = 10
-    #     n = m**2
+#     def configuration_model():
+#         m = 10
+#         n = m**2
 
-    #     r = np.sqrt(2)*((m/2)**0.4)
-    #     deg_v = 4 # w_c. Every bit is in this many checks
-    #     deg_c = 5 # w_r. Every check has this many bits in it
-    #     num_checks = (n*deg_v)//deg_c
-    #     k = n - num_checks
+#         r = np.sqrt(2)*((m/2)**0.4)
+#         deg_v = 4 # w_c. Every bit is in this many checks
+#         deg_c = 5 # w_r. Every check has this many bits in it
+#         num_checks = (n*deg_v)//deg_c
+#         k = n - num_checks
 
-    #     vs = [deg_v for _ in range(n)]
-    #     qbts = [(x,y) for x in range(m) for y in range(m)]
-    #     pot_qbts = np.ones((num_checks, n))
-    #     ops = [[] for i in range(num_checks)]
+#         vs = [deg_v for _ in range(n)]
+#         qbts = [(x,y) for x in range(m) for y in range(m)]
+#         pot_qbts = np.ones((num_checks, n))
+#         ops = [[] for i in range(num_checks)]
 
-    #     while (np.count_nonzero(vs)):
-    #         if (np.count_nonzero(pot_qbts)):
-    #             c_ind = np.random.choice(np.where(pot_qbts.any(axis=1))[0])
-    #         else:
-    #             # print("Failed")
-    #             break
+#         while (np.count_nonzero(vs)):
+#             if (np.count_nonzero(pot_qbts)):
+#                 c_ind = np.random.choice(np.where(pot_qbts.any(axis=1))[0])
+#             else:
+#                 # print("Failed")
+#                 break
 
-    #         # choose a v that is within the specified radius (from list of potential qbts)
-    #         v_ind = np.random.choice(np.nonzero(pot_qbts[c_ind])[0])
-    #         ops[c_ind].append(qbts[v_ind])
+#             # choose a v that is within the specified radius (from list of potential qbts)
+#             v_ind = np.random.choice(np.nonzero(pot_qbts[c_ind])[0])
+#             ops[c_ind].append(qbts[v_ind])
 
-    #         if (len(ops[c_ind]) == deg_c):
-    #             pot_qbts[c_ind, :] = 0
-    #         else:
-    #             pot_qbts[c_ind][v_ind] = 0
+#             if (len(ops[c_ind]) == deg_c):
+#                 pot_qbts[c_ind, :] = 0
+#             else:
+#                 pot_qbts[c_ind][v_ind] = 0
 
-    #         # update potential qbts
-    #         for pot_ind, pot in enumerate(pot_qbts[c_ind]):
-    #             if (pot and (make_circle(ops[c_ind] + [qbts[pot_ind]])[2] > r)):
-    #                 pot_qbts[c_ind][pot_ind] = 0
+#             # update potential qbts
+#             for pot_ind, pot in enumerate(pot_qbts[c_ind]):
+#                 if (pot and (make_circle(ops[c_ind] + [qbts[pot_ind]])[2] > r)):
+#                     pot_qbts[c_ind][pot_ind] = 0
 
-    #         vs[v_ind] -= 1
-    #         if (not vs[v_ind]):
-    #             pot_qbts[:, v_ind] = 0
+#             vs[v_ind] -= 1
+#             if (not vs[v_ind]):
+#                 pot_qbts[:, v_ind] = 0
 
+GF = galois.GF(2)
 
-def print_gens(N, M, gens, label):
-    lattice = [["." for i in range(N)] for j in range(M)]
+def find_codes(code_params):
+    def cyclic_shift_matrix(l):
+        arr = np.eye(l, dtype=int)
+        return np.roll(arr, axis=1, shift=1)
 
-    for qbts, gen in gens:
-        for qbt in qbts:
-            lattice[qbt[0]][qbt[1]] = "q"
-        lattice[gen[0]][gen[1]] = label
-    for j in range(N):
-        for i in range(M):
-    # for i in range(M-1, -1, -1):
-        # for j in range(N):
-            print(lattice[i][j], end="")
-        print()
+    ell = code_params[0]
+    m = code_params[1]
 
+    x = np.kron(cyclic_shift_matrix(ell), np.eye(m))
+    y = np.kron(np.eye(ell), cyclic_shift_matrix(m))
 
-# def independent_gens(gens):
-#     ind_sets = []
-#     gen_sets = [set(gen) for gen in gens]
+    A1 = matrix_power(x, code_params[2])
+    A2 = matrix_power(y, code_params[3])
+    A3 = matrix_power(y, code_params[4])
+    A = ( A1 + A2 + A3 ) % 2
 
-#     while gen_sets:
-#         ind_set = [gen_sets[0]]
-#         gen_sets.pop(0)
+    B1 = matrix_power(y, code_params[5])
+    B2 = matrix_power(x, code_params[6])
+    B3 = matrix_power(x, code_params[7])
+    B = ( B1 + B2 + B3 ) % 2
 
-#         for i, gen_set in reversed(list(enumerate(gen_sets))):
-#             add = True
-#             for gen in ind_set:
-#                 if (gen & gen_set):
-#                     add = False
+    Hx = np.hstack([A, B]).astype(int)
+    Hz = np.hstack([B.T, A.T]).astype(int)
+    k = 2 * (Hz.T.shape[1] - matrix_rank(GF(Hz.T)))
+    if (k == 0): return
 
-#             if add:
-#                 ind_set.append(gen_set)
-#                 gen_sets.pop(i)
-
-#         if (ind_set):
-#             ind_sets.append(ind_set)
-
-#     return ind_sets
-
-# gens = randomly_draw_generators(1, 0)
-
-long_gens = [
-# [[(5, 0), (3, 24), (0, 29), (0, 27)], (0, 0)],[[(5, 24), (2, 29), (2, 27)], (2, 0)],[[(1, 24), (4, 29), (4, 27)], (4, 0)],[[(5, 2), (3, 26), (0, 29)], (0, 2)],[[(5, 26), (2, 29)], (2, 2)],[[(1, 26), (4, 29)], (4, 2)],[[(5, 4), (3, 28), (0, 1)], (0, 4)],[[(5, 28), (2, 1)], (2, 4)],[[(1, 28), (4, 1)], (4, 4)],[[(3, 0), (3, 2), (0, 5)], (3, 29)],[[(5, 0), (5, 2), (0, 29), (2, 5)], (5, 29)],[[(1, 0), (1, 2), (4, 5)], (1, 29)],[[(3, 28), (0, 1)], (3, 25)],[[(5, 28), (2, 1), (0, 25)], (5, 25)],[[(1, 28), (4, 1)], (1, 25)],[[(3, 0), (0, 3)], (3, 27)],[[(5, 0), (2, 3), (0, 27)], (5, 27)],[[(1, 0), (4, 3)], (1, 27)]
-]
+    def has_toric_layout():
+        # As = [A1 @ A2.T, A2 @ A3.T, A1 @ A3.T]  # A2 @ A3.T cycling up, A3 @ A2.T cycling up, etc.
+        # Bs = [B1 @ B2.T, B2 @ B3.T, B1 @ B3.T]
+        As = [A1 @ A2.T, A2 @ A1.T, A2 @ A3.T, A3 @ A2.T, A1 @ A3.T, A3 @ A1.T ]
+        Bs = [B1 @ B2.T, B2 @ B1.T, B2 @ B3.T, B3 @ B2.T, B1 @ B3.T, B3 @ B1.T]
 
 
-short_gens = [
-# [[(3, 0), (5, 6), (0, 3)], (0, 6)],[[(5, 0), (2, 3)], (2, 6)],[[(1, 0), (4, 3)], (4, 6)],[[(3, 2), (5, 8), (0, 5)], (0, 8)],[[(5, 2), (2, 5)], (2, 8)],[[(1, 2), (4, 5)], (4, 8)],[[(3, 4), (5, 10), (0, 7)], (0, 10)],[[(5, 4), (2, 7)], (2, 10)],[[(1, 4), (4, 7)], (4, 10)],[[(3, 6), (5, 12), (0, 9)], (0, 12)],[[(5, 6), (2, 9)], (2, 12)],[[(1, 6), (4, 9)], (4, 12)],[[(3, 8), (5, 14), (0, 11)], (0, 14)],[[(5, 8), (2, 11)], (2, 14)],[[(1, 8), (4, 11)], (4, 14)],[[(3, 10), (5, 16), (0, 13)], (0, 16)],[[(5, 10), (2, 13)], (2, 16)],[[(1, 10), (4, 13)], (4, 16)],[[(3, 12), (5, 18), (0, 15)], (0, 18)],[[(5, 12), (2, 15)], (2, 18)],[[(1, 12), (4, 15)], (4, 18)],[[(3, 14), (5, 20), (0, 17)], (0, 20)],[[(5, 14), (2, 17)], (2, 20)],[[(1, 14), (4, 17)], (4, 20)],[[(3, 16), (5, 22), (0, 19)], (0, 22)],[[(5, 16), (2, 19)], (2, 22)],[[(1, 16), (4, 19)], (4, 22)],[[(3, 18), (5, 24), (0, 21)], (0, 24)],[[(5, 18), (2, 21)], (2, 24)],[[(1, 18), (4, 21)], (4, 24)],[[(3, 20), (5, 26), (0, 23)], (0, 26)],[[(5, 20), (2, 23)], (2, 26)],[[(1, 20), (4, 23)], (4, 26)],[[(3, 22), (5, 28), (0, 25)], (0, 28)],[[(5, 22), (2, 25)], (2, 28)],[[(1, 22), (4, 25)], (4, 28)],[[(3, 4), (0, 7)], (3, 1)],[[(5, 4), (0, 1), (2, 7)], (5, 1)],[[(1, 4), (4, 7)], (1, 1)],[[(3, 6), (0, 9)], (3, 3)],[[(5, 6), (0, 3), (2, 9)], (5, 3)],[[(1, 6), (4, 9)], (1, 3)],[[(3, 8), (0, 11)], (3, 5)],[[(5, 8), (0, 5), (2, 11)], (5, 5)],[[(1, 8), (4, 11)], (1, 5)],[[(3, 10), (0, 13)], (3, 7)],[[(5, 10), (0, 7), (2, 13)], (5, 7)],[[(1, 10), (4, 13)], (1, 7)],[[(3, 12), (0, 15)], (3, 9)],[[(5, 12), (0, 9), (2, 15)], (5, 9)],[[(1, 12), (4, 15)], (1, 9)],[[(3, 14), (0, 17)], (3, 11)],[[(5, 14), (0, 11), (2, 17)], (5, 11)],[[(1, 14), (4, 17)], (1, 11)],[[(3, 16), (0, 19)], (3, 13)],[[(5, 16), (0, 13), (2, 19)], (5, 13)],[[(1, 16), (4, 19)], (1, 13)],[[(3, 18), (0, 21)], (3, 15)],[[(5, 18), (0, 15), (2, 21)], (5, 15)],[[(1, 18), (4, 21)], (1, 15)],[[(3, 20), (0, 23)], (3, 17)],[[(5, 20), (0, 17), (2, 23)], (5, 17)],[[(1, 20), (4, 23)], (1, 17)],[[(3, 22), (0, 25)], (3, 19)],[[(5, 22), (0, 19), (2, 25)], (5, 19)],[[(1, 22), (4, 25)], (1, 19)],[[(3, 24), (0, 27)], (3, 21)],[[(5, 24), (0, 21), (2, 27)], (5, 21)],[[(1, 24), (4, 27)], (1, 21)],[[(3, 26), (0, 29)], (3, 23)],[[(5, 26), (2, 29), (0, 23)], (5, 23)],[[(1, 26), (4, 29)], (1, 23)],
-[[(11, 14), (9, 8), (6, 11)], (0, 14)],[[(11, 8), (8, 11)], (2, 14)],[[(1, 8), (10, 11)], (4, 14)],[[(3, 8), (0, 11)], (6, 14)],[[(5, 8), (2, 11)], (8, 14)],[[(7, 8), (4, 11)], (10, 14)],[[(11, 28), (9, 22), (6, 25)], (0, 28)],[[(11, 22), (8, 25)], (2, 28)],[[(1, 22), (10, 25)], (4, 28)],[[(3, 22), (0, 25)], (6, 28)],[[(5, 22), (2, 25)], (8, 28)],[[(7, 22), (4, 25)], (10, 28)],[[(11, 42), (9, 36), (6, 39)], (0, 42)],[[(11, 36), (8, 39)], (2, 42)],[[(1, 36), (10, 39)], (4, 42)],[[(3, 36), (0, 39)], (6, 42)],[[(5, 36), (2, 39)], (8, 42)],[[(7, 36), (4, 39)], (10, 42)],[[(11, 56), (9, 50), (6, 53)], (0, 56)],[[(11, 50), (8, 53)], (2, 56)],[[(1, 50), (10, 53)], (4, 56)],[[(3, 50), (0, 53)], (6, 56)],[[(5, 50), (2, 53)], (8, 56)],[[(7, 50), (4, 53)], (10, 56)],[[(11, 10), (9, 4), (6, 7)], (0, 10)],[[(11, 4), (8, 7)], (2, 10)],[[(1, 4), (10, 7)], (4, 10)],[[(3, 4), (0, 7)], (6, 10)],[[(5, 4), (2, 7)], (8, 10)],[[(7, 4), (4, 7)], (10, 10)],[[(11, 24), (9, 18), (6, 21)], (0, 24)],[[(11, 18), (8, 21)], (2, 24)],[[(1, 18), (10, 21)], (4, 24)],[[(3, 18), (0, 21)], (6, 24)],[[(5, 18), (2, 21)], (8, 24)],[[(7, 18), (4, 21)], (10, 24)],[[(11, 38), (9, 32), (6, 35)], (0, 38)],[[(11, 32), (8, 35)], (2, 38)],[[(1, 32), (10, 35)], (4, 38)],[[(3, 32), (0, 35)], (6, 38)],[[(5, 32), (2, 35)], (8, 38)],[[(7, 32), (4, 35)], (10, 38)],[[(11, 52), (9, 46), (6, 49)], (0, 52)],[[(11, 46), (8, 49)], (2, 52)],[[(1, 46), (10, 49)], (4, 52)],[[(3, 46), (0, 49)], (6, 52)],[[(5, 46), (2, 49)], (8, 52)],[[(7, 46), (4, 49)], (10, 52)],[[(9, 0), (11, 6), (6, 3)], (0, 6)],[[(11, 0), (8, 3)], (2, 6)],[[(1, 0), (10, 3)], (4, 6)],[[(3, 0), (0, 3)], (6, 6)],[[(5, 0), (2, 3)], (8, 6)],[[(7, 0), (4, 3)], (10, 6)],[[(9, 14), (11, 20), (6, 17)], (0, 20)],[[(11, 14), (8, 17)], (2, 20)],[[(1, 14), (10, 17)], (4, 20)],[[(3, 14), (0, 17)], (6, 20)],[[(5, 14), (2, 17)], (8, 20)],[[(7, 14), (4, 17)], (10, 20)],[[(9, 28), (11, 34), (6, 31)], (0, 34)],[[(11, 28), (8, 31)], (2, 34)],[[(1, 28), (10, 31)], (4, 34)],[[(3, 28), (0, 31)], (6, 34)],[[(5, 28), (2, 31)], (8, 34)],[[(7, 28), (4, 31)], (10, 34)],[[(9, 42), (11, 48), (6, 45)], (0, 48)],[[(11, 42), (8, 45)], (2, 48)],[[(1, 42), (10, 45)], (4, 48)],[[(3, 42), (0, 45)], (6, 48)],[[(5, 42), (2, 45)], (8, 48)],[[(7, 42), (4, 45)], (10, 48)],[[(9, 10), (11, 16), (6, 13)], (0, 16)],[[(11, 10), (8, 13)], (2, 16)],[[(1, 10), (10, 13)], (4, 16)],[[(3, 10), (0, 13)], (6, 16)],[[(5, 10), (2, 13)], (8, 16)],[[(7, 10), (4, 13)], (10, 16)],[[(9, 24), (11, 30), (6, 27)], (0, 30)],[[(11, 24), (8, 27)], (2, 30)],[[(1, 24), (10, 27)], (4, 30)],[[(3, 24), (0, 27)], (6, 30)],[[(5, 24), (2, 27)], (8, 30)],[[(7, 24), (4, 27)], (10, 30)],[[(9, 38), (11, 44), (6, 41)], (0, 44)],[[(11, 38), (8, 41)], (2, 44)],[[(1, 38), (10, 41)], (4, 44)],[[(3, 38), (0, 41)], (6, 44)],[[(5, 38), (2, 41)], (8, 44)],[[(7, 38), (4, 41)], (10, 44)],[[(9, 52), (11, 58), (6, 55)], (0, 58)],[[(11, 52), (8, 55)], (2, 58)],[[(1, 52), (10, 55)], (4, 58)],[[(3, 52), (0, 55)], (6, 58)],[[(5, 52), (2, 55)], (8, 58)],[[(7, 52), (4, 55)], (10, 58)],[[(9, 6), (11, 12), (6, 9)], (0, 12)],[[(11, 6), (8, 9)], (2, 12)],[[(1, 6), (10, 9)], (4, 12)],[[(3, 6), (0, 9)], (6, 12)],[[(5, 6), (2, 9)], (8, 12)],[[(7, 6), (4, 9)], (10, 12)],[[(9, 20), (11, 26), (6, 23)], (0, 26)],[[(11, 20), (8, 23)], (2, 26)],[[(1, 20), (10, 23)], (4, 26)],[[(3, 20), (0, 23)], (6, 26)],[[(5, 20), (2, 23)], (8, 26)],[[(7, 20), (4, 23)], (10, 26)],[[(9, 34), (11, 40), (6, 37)], (0, 40)],[[(11, 34), (8, 37)], (2, 40)],[[(1, 34), (10, 37)], (4, 40)],[[(3, 34), (0, 37)], (6, 40)],[[(5, 34), (2, 37)], (8, 40)],[[(7, 34), (4, 37)], (10, 40)],[[(9, 48), (11, 54), (6, 51)], (0, 54)],[[(11, 48), (8, 51)], (2, 54)],[[(1, 48), (10, 51)], (4, 54)],[[(3, 48), (0, 51)], (6, 54)],[[(5, 48), (2, 51)], (8, 54)],[[(7, 48), (4, 51)], (10, 54)],[[(9, 2), (11, 8), (6, 5)], (0, 8)],[[(11, 2), (8, 5)], (2, 8)],[[(1, 2), (10, 5)], (4, 8)],[[(3, 2), (0, 5)], (6, 8)],[[(5, 2), (2, 5)], (8, 8)],[[(7, 2), (4, 5)], (10, 8)],[[(9, 16), (11, 22), (6, 19)], (0, 22)],[[(11, 16), (8, 19)], (2, 22)],[[(1, 16), (10, 19)], (4, 22)],[[(3, 16), (0, 19)], (6, 22)],[[(5, 16), (2, 19)], (8, 22)],[[(7, 16), (4, 19)], (10, 22)],[[(9, 30), (11, 36), (6, 33)], (0, 36)],[[(11, 30), (8, 33)], (2, 36)],[[(1, 30), (10, 33)], (4, 36)],[[(3, 30), (0, 33)], (6, 36)],[[(5, 30), (2, 33)], (8, 36)],[[(7, 30), (4, 33)], (10, 36)],[[(9, 44), (11, 50), (6, 47)], (0, 50)],[[(11, 44), (8, 47)], (2, 50)],[[(1, 44), (10, 47)], (4, 50)],[[(3, 44), (0, 47)], (6, 50)],[[(5, 44), (2, 47)], (8, 50)],[[(7, 44), (4, 47)], (10, 50)],[[(9, 12), (11, 18), (6, 15)], (0, 18)],[[(11, 12), (8, 15)], (2, 18)],[[(1, 12), (10, 15)], (4, 18)],[[(3, 12), (0, 15)], (6, 18)],[[(5, 12), (2, 15)], (8, 18)],[[(7, 12), (4, 15)], (10, 18)],[[(9, 26), (11, 32), (6, 29)], (0, 32)],[[(11, 26), (8, 29)], (2, 32)],[[(1, 26), (10, 29)], (4, 32)],[[(3, 26), (0, 29)], (6, 32)],[[(5, 26), (2, 29)], (8, 32)],[[(7, 26), (4, 29)], (10, 32)],[[(9, 40), (11, 46), (6, 43)], (0, 46)],[[(11, 40), (8, 43)], (2, 46)],[[(1, 40), (10, 43)], (4, 46)],[[(3, 40), (0, 43)], (6, 46)],[[(5, 40), (2, 43)], (8, 46)],[[(7, 40), (4, 43)], (10, 46)],[[(3, 14), (0, 17)], (9, 11)],[[(5, 14), (0, 11), (2, 17)], (11, 11)],[[(7, 14), (4, 17)], (1, 11)],[[(9, 14), (6, 17)], (3, 11)],[[(11, 14), (8, 17)], (5, 11)],[[(1, 14), (10, 17)], (7, 11)],[[(3, 28), (0, 31)], (9, 25)],[[(5, 28), (0, 25), (2, 31)], (11, 25)],[[(7, 28), (4, 31)], (1, 25)],[[(9, 28), (6, 31)], (3, 25)],[[(11, 28), (8, 31)], (5, 25)],[[(1, 28), (10, 31)], (7, 25)],[[(3, 42), (0, 45)], (9, 39)],[[(5, 42), (0, 39), (2, 45)], (11, 39)],[[(7, 42), (4, 45)], (1, 39)],[[(9, 42), (6, 45)], (3, 39)],[[(11, 42), (8, 45)], (5, 39)],[[(1, 42), (10, 45)], (7, 39)],[[(3, 56), (0, 59)], (9, 53)],[[(5, 56), (0, 53), (2, 59)], (11, 53)],[[(7, 56), (4, 59)], (1, 53)],[[(9, 56), (6, 59)], (3, 53)],[[(11, 56), (8, 59)], (5, 53)],[[(1, 56), (10, 59)], (7, 53)],[[(3, 10), (0, 13)], (9, 7)],[[(5, 10), (0, 7), (2, 13)], (11, 7)],[[(7, 10), (4, 13)], (1, 7)],[[(9, 10), (6, 13)], (3, 7)],[[(11, 10), (8, 13)], (5, 7)],[[(1, 10), (10, 13)], (7, 7)],[[(3, 24), (0, 27)], (9, 21)],[[(5, 24), (0, 21), (2, 27)], (11, 21)],[[(7, 24), (4, 27)], (1, 21)],[[(9, 24), (6, 27)], (3, 21)],[[(11, 24), (8, 27)], (5, 21)],[[(1, 24), (10, 27)], (7, 21)],[[(3, 38), (0, 41)], (9, 35)],[[(5, 38), (0, 35), (2, 41)], (11, 35)],[[(7, 38), (4, 41)], (1, 35)],[[(9, 38), (6, 41)], (3, 35)],[[(11, 38), (8, 41)], (5, 35)],[[(1, 38), (10, 41)], (7, 35)],[[(3, 52), (0, 55)], (9, 49)],[[(5, 52), (0, 49), (2, 55)], (11, 49)],[[(7, 52), (4, 55)], (1, 49)],[[(9, 52), (6, 55)], (3, 49)],[[(11, 52), (8, 55)], (5, 49)],[[(1, 52), (10, 55)], (7, 49)],[[(3, 6), (0, 9)], (9, 3)],[[(5, 6), (0, 3), (2, 9)], (11, 3)],[[(7, 6), (4, 9)], (1, 3)],[[(9, 6), (6, 9)], (3, 3)],[[(11, 6), (8, 9)], (5, 3)],[[(1, 6), (10, 9)], (7, 3)],[[(3, 20), (0, 23)], (9, 17)],[[(5, 20), (0, 17), (2, 23)], (11, 17)],[[(7, 20), (4, 23)], (1, 17)],[[(9, 20), (6, 23)], (3, 17)],[[(11, 20), (8, 23)], (5, 17)],[[(1, 20), (10, 23)], (7, 17)],[[(3, 34), (0, 37)], (9, 31)],[[(5, 34), (0, 31), (2, 37)], (11, 31)],[[(7, 34), (4, 37)], (1, 31)],[[(9, 34), (6, 37)], (3, 31)],[[(11, 34), (8, 37)], (5, 31)],[[(1, 34), (10, 37)], (7, 31)],[[(3, 48), (0, 51)], (9, 45)],[[(5, 48), (0, 45), (2, 51)], (11, 45)],[[(7, 48), (4, 51)], (1, 45)],[[(9, 48), (6, 51)], (3, 45)],[[(11, 48), (8, 51)], (5, 45)],[[(1, 48), (10, 51)], (7, 45)],[[(3, 16), (0, 19)], (9, 13)],[[(5, 16), (0, 13), (2, 19)], (11, 13)],[[(7, 16), (4, 19)], (1, 13)],[[(9, 16), (6, 19)], (3, 13)],[[(11, 16), (8, 19)], (5, 13)],[[(1, 16), (10, 19)], (7, 13)],[[(3, 30), (0, 33)], (9, 27)],[[(5, 30), (0, 27), (2, 33)], (11, 27)],[[(7, 30), (4, 33)], (1, 27)],[[(9, 30), (6, 33)], (3, 27)],[[(11, 30), (8, 33)], (5, 27)],[[(1, 30), (10, 33)], (7, 27)],[[(3, 44), (0, 47)], (9, 41)],[[(5, 44), (0, 41), (2, 47)], (11, 41)],[[(7, 44), (4, 47)], (1, 41)],[[(9, 44), (6, 47)], (3, 41)],[[(11, 44), (8, 47)], (5, 41)],[[(1, 44), (10, 47)], (7, 41)],[[(3, 12), (0, 15)], (9, 9)],[[(5, 12), (0, 9), (2, 15)], (11, 9)],[[(7, 12), (4, 15)], (1, 9)],[[(9, 12), (6, 15)], (3, 9)],[[(11, 12), (8, 15)], (5, 9)],[[(1, 12), (10, 15)], (7, 9)],[[(3, 26), (0, 29)], (9, 23)],[[(5, 26), (0, 23), (2, 29)], (11, 23)],[[(7, 26), (4, 29)], (1, 23)],[[(9, 26), (6, 29)], (3, 23)],[[(11, 26), (8, 29)], (5, 23)],[[(1, 26), (10, 29)], (7, 23)],[[(3, 40), (0, 43)], (9, 37)],[[(5, 40), (0, 37), (2, 43)], (11, 37)],[[(7, 40), (4, 43)], (1, 37)],[[(9, 40), (6, 43)], (3, 37)],[[(11, 40), (8, 43)], (5, 37)],[[(1, 40), (10, 43)], (7, 37)],[[(3, 54), (0, 57)], (9, 51)],[[(5, 54), (2, 57), (0, 51)], (11, 51)],[[(7, 54), (4, 57)], (1, 51)],[[(9, 54), (6, 57)], (3, 51)],[[(11, 54), (8, 57)], (5, 51)],[[(1, 54), (10, 57)], (7, 51)],[[(3, 8), (0, 11)], (9, 5)],[[(5, 8), (2, 11), (0, 5)], (11, 5)],[[(7, 8), (4, 11)], (1, 5)],[[(9, 8), (6, 11)], (3, 5)],[[(11, 8), (8, 11)], (5, 5)],[[(1, 8), (10, 11)], (7, 5)],[[(3, 22), (0, 25)], (9, 19)],[[(5, 22), (2, 25), (0, 19)], (11, 19)],[[(7, 22), (4, 25)], (1, 19)],[[(9, 22), (6, 25)], (3, 19)],[[(11, 22), (8, 25)], (5, 19)],[[(1, 22), (10, 25)], (7, 19)],[[(3, 36), (0, 39)], (9, 33)],[[(5, 36), (2, 39), (0, 33)], (11, 33)],[[(7, 36), (4, 39)], (1, 33)],[[(9, 36), (6, 39)], (3, 33)],[[(11, 36), (8, 39)], (5, 33)],[[(1, 36), (10, 39)], (7, 33)],[[(3, 50), (0, 53)], (9, 47)],[[(5, 50), (2, 53), (0, 47)], (11, 47)],[[(7, 50), (4, 53)], (1, 47)],[[(9, 50), (6, 53)], (3, 47)],[[(11, 50), (8, 53)], (5, 47)],[[(1, 50), (10, 53)], (7, 47)],[[(3, 4), (0, 7)], (9, 1)],[[(5, 4), (2, 7), (0, 1)], (11, 1)],[[(7, 4), (4, 7)], (1, 1)],[[(9, 4), (6, 7)], (3, 1)],[[(11, 4), (8, 7)], (5, 1)],[[(1, 4), (10, 7)], (7, 1)],[[(3, 18), (0, 21)], (9, 15)],[[(5, 18), (2, 21), (0, 15)], (11, 15)],[[(7, 18), (4, 21)], (1, 15)],[[(9, 18), (6, 21)], (3, 15)],[[(11, 18), (8, 21)], (5, 15)],[[(1, 18), (10, 21)], (7, 15)],[[(3, 32), (0, 35)], (9, 29)],[[(5, 32), (2, 35), (0, 29)], (11, 29)],[[(7, 32), (4, 35)], (1, 29)],[[(9, 32), (6, 35)], (3, 29)],[[(11, 32), (8, 35)], (5, 29)],[[(1, 32), (10, 35)], (7, 29)],[[(3, 46), (0, 49)], (9, 43)],[[(5, 46), (2, 49), (0, 43)], (11, 43)],[[(7, 46), (4, 49)], (1, 43)],[[(9, 46), (6, 49)], (3, 43)],[[(11, 46), (8, 49)], (5, 43)],[[(1, 46), (10, 49)], (7, 43)],
-]
+        def has_toric_layout1():
+            def order(arr):
+                for i in range(1, m*ell):
+                    if not np.any(np.eye(arr.shape[0]) - np.linalg.matrix_power(arr, i)):
+                        return i
+                return -1
+
+            Aorders = [order(AA) for AA in As]
+            Borders = [order(BB) for BB in Bs]
+
+            pot_orders = []
+            for i, Ao in enumerate(Aorders):
+                for j, Bo in enumerate(Borders):
+                    if (Ao*Bo == m*ell):
+                        pot_orders.append((Ao,Bo,i,j))
+            return pot_orders
+
+        def has_toric_layout2(pot_codes):
+            emb_m, emb_ell, A_ind, B_ind = pot_codes
+
+            visited_qbts = set()
+
+            ver = csr_matrix(As[A_ind])
+            hor = csr_matrix(Bs[B_ind])
+
+            zero = np.zeros(m*ell)
+            zero[0] = 1
+
+            for i in range(emb_m):
+                tmp_qbt = (ver**i) @ zero if i else zero
+                for j in range(emb_ell):
+                    visited_qbts |= {np.where((hor**j) @ tmp_qbt)[0][0] if j else np.where(tmp_qbt)[0][0]}
+
+            return len(visited_qbts) == ell*m
+
+        confirmed_codes = []
+        pot_codes = has_toric_layout1()
+        for pot_code in pot_codes:
+            if has_toric_layout2(pot_code):
+                confirmed_codes.append(pot_code)
+        return confirmed_codes
+
+    confirmed_codes = has_toric_layout()
+    if (len(confirmed_codes) == 0): return
+
+    def embed_code(code, init):
+        emb_m, emb_ell, A_ind, B_ind = code
+
+        lattice = np.empty((2*emb_m, 2*emb_ell), dtype=object)
+        lattice[0][0] = f"x{init}"
+
+        # As = [[A1, A2.T], [A2, A3.T], [A1, A3.T]]
+        # Bs = [[B1, B2.T], [B2, B3.T], [B1, B3.T]]
+        As = [[A1, A2.T], [A2, A1.T], [A2, A3.T], [A3, A2.T], [A1, A3.T], [A3, A1.T]]
+        Bs = [[B1, B2.T], [B2, B1.T], [B2, B3.T], [B3, B2.T], [B1, B3.T], [B3, B1.T]]
+
+        def get_nbr(i, j):
+            if (i % 2 == 0):
+                if (j % 2 == 0):
+                    return "x"
+                else:
+                    return "r"
+            else:
+                if (j % 2 == 0):
+                    return "l"
+                else:
+                    return "z"
+
+        for i in range(2*emb_m - 1):
+            for j in range(2*emb_ell):
+                curr_ind = int(lattice[i][j][1:])
+
+                if (i % 2 == 0):
+                    tmp_A = As[A_ind][1]
+                else:
+                    tmp_A = As[A_ind][0]
+                if (j % 2 == 0):
+                    tmp_B = Bs[B_ind][1]
+                else:
+                    tmp_B = Bs[B_ind][0]
+
+                lattice[(i+1)%(2*emb_m)][j] = f"{get_nbr((i+1)%(2*emb_m), j)}{np.where(tmp_A @ np.eye(m*ell)[curr_ind])[0][0]}"
+                lattice[i][(j+1)%(2*emb_ell)] = f"{get_nbr(i, (j+1)%(2*emb_ell))}{np.where(tmp_B @ np.eye(m*ell)[curr_ind])[0][0]}"
+
+        for i in range(2*emb_m):
+            for j in range(2*emb_ell):
+                if (lattice[i][j][0] == "z"):
+                    lattice[i][j] = f"z{int(lattice[i][j][1:]) + m*ell}"
+                elif (lattice[i][j][0] == "r"):
+                    lattice[i][j] = f"r{int(lattice[i][j][1:]) + m*ell}"
+
+        return lattice
+
+    def manhattan(qbts):
+        p, q = qbts
+        return np.abs(p[0]-q[0])+np.abs(p[1]-q[1])
+
+    res = []
+    for c, code in enumerate(confirmed_codes):
+        lattice = embed_code(code, 0)
+
+        all_qbts = {}
+        qbts = np.array([None for i in range(2*m*ell)])
+        for i in range(lattice.shape[0]):
+            for j in range(lattice.shape[1]):
+                if lattice[i][j][0] == "r" or lattice[i][j][0] == "l":
+                    all_qbts[(i,j)] = int(lattice[i][j][1:])
+                    qbts[int(lattice[i][j][1:])] = (i, j)
+        x_checks = np.array([None for i in range(m*ell)])
+        z_checks = np.array([None for i in range(m*ell)])
+
+        for i in range(lattice.shape[0]):
+            for j in range(lattice.shape[1]):
+                if lattice[i][j][0] == "x":
+                    all_qbts[(i,j)] = int(lattice[i][j][1:]) + 2*m*ell
+                    x_checks[int(lattice[i][j][1:])] = (i, j)
+                elif lattice[i][j][0] == "z":
+                    all_qbts[(i,j)] = int(lattice[i][j][1:]) + 2*m*ell
+                    z_checks[int(lattice[i][j][1:])-(m*ell)] = (i, j)
+
+        gens = []
+        tot_paths = 0
+        for i in range(m*ell):
+            nlqbts = []
+            coord = x_checks[i]
+            gen_qbts = qbts[np.where(Hx[i])[0]]
+            for qbt in gen_qbts:
+                if (abs(coord[0]-qbt[0])+ abs(coord[1]-qbt[1]) > 1):
+                    # nlqbts.append(qbt)
+                    gens.append([[qbt], coord])
+                    tot_paths += (manhattan([qbt, coord]) + 1)
+            # gens.append([nlqbts, coord])
+
+        grid = Grid(lattice.shape[0], lattice.shape[1], 1)
+        rounds = grid.greedy_route_set(gens)
+
+        res.append((tot_paths, lattice.shape[0]*lattice.shape[1], rounds))
 
 
-short_gens_split = []
-long_gens_split = []
-for gen in short_gens:
-    for qbt in gen[0]:
-        short_gens_split.append([[qbt], gen[1]])
-for gen in long_gens:
-    for qbt in gen[0]:
-        long_gens_split.append([[qbt], gen[1]])
-
-# r = Grid(60, 12, 2)
-# r.set_available_ancillas(needed_ancillas)
-
-# rounds = r.greedy_route_set(short_gens_split)
-# rounds = r.greedy_route_set(long_gens_split)
+        # for i in range(m*ell):
+        #     nlqbts = []
+        #     coord = z_checks[i]
+        #     gen_qbts = qbts[np.where(Hz[i])[0]]
+        #     for qbt in gen_qbts:
+        #         if (abs(coord[0]-qbt[0])+ abs(coord[1]-qbt[1]) > 1):
+        #             nlqbts.append(qbt)
 
 
-# r.print_grid()
-# print(rounds)
+        # print(f"{2*m*ell},{k}," + ','.join(map(str, code_params)) + ',' + ','.join(map(str, code)))
+    return res
 
-# print_gens(30, 6, short_gens[:len(short_gens)//2], "x")
 
-gens = short_gens
-for gen in sorted(gens[:len(gens)//2], key=lambda x: x[1]):
-    print(gen)
-    print_gens(60, 12, [gen], "x")
-    print()
+# m = 20
+# ell = 20
 
-# for gen in sorted(gens[len(gens)//2:], key=lambda x: x[1]):
-#     print(gen)
-#     print_gens(30, 6, [gen], "z")
-#     print()
-# c = r.route_generator([(3, 6), (2, 11)], prior_dest=(2, 14))
-# print(c)
-# print(gens)
-# ind_gens = independent_gens(gens)
-# print(len(ind_gens))
+# overall_res = []
 
-# for ind_gen in ind_gens:
-    # print(ind_gen)
-    # flat = sum(list(chain(*ind_gen)), ())
-    # print(len(flat)//2 / M**2)
-    # print()
+# variables = range(1, max(m,ell))
+
+# resses = []
+# for k in range(1000):
+#     if (k % 100 == 0): print(".", end="")
+#     combo = [np.random.randint(ell+1), np.random.randint(m+1), np.random.randint(m+1), np.random.randint(m+1), np.random.randint(ell+1), np.random.randint(ell+1)]
+#     if ((combo[1] == combo[2]) or (combo[4] == combo[5])): continue
+#     res = find_codes([ell,m] + combo)
+#     if res: resses += res
+
+# if resses:
+#     routing_times = [r[2] for r in resses]
+#     theory_times = [r[0]/r[1] for r in resses]
+
+
+#     overall_res.append([m, ell, np.mean(theory_times), np.mean(routing_times)])
+
+# print(overall_res)
+
