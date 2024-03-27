@@ -27,7 +27,7 @@ def plot_surface_data_10x(ax, d, k):
     print(d, k, popt)
     xx = np.linspace(2, 80, 1000)
     yy = fun(xx, *popt)
-    ax.plot(xx, yy, c='k', linewidth=0.75)
+    ax.plot(xx, yy, c='k', linewidth=1)
 
 def plot_surface_data(ax, d, k):
     ts = [10,20,30,40,50,60,70,80,90,100]
@@ -58,7 +58,7 @@ plt.rc('font', family='serif')
 # plt.rcParams['ytick.direction'] = 'in'
 plt.rcParams['axes.linewidth'] = 1
 
-fig, ax = plt.subplots(1, 3, figsize=(12,4), sharey=True)
+fig, ax = plt.subplots(1, 3, figsize=(12,3), sharey=True)
 
 codes = [[12,3],[9,5],[12,5],[15,5]]#,[21,5]]
 ds = [6,6,8,8]
@@ -86,7 +86,7 @@ for i, code in enumerate(codes):
     print(code, popt)
     xx = np.linspace(2, 80, 1000)
     yy = fun(xx, *popt)
-    ax[0].plot(xx, yy, c=colors[i], linewidth=0.75)
+    ax[0].plot(xx, yy, c=colors[i], linewidth=1)
 
 if x10:
     plot_surface_data_10x(ax[0], 4, 8)
@@ -103,7 +103,7 @@ else:
 ax[0].set_yscale('log')
 ax[0].set_ylabel('Logical error rate, $p_\log$')
 ax[0].set_xlabel('Rounds, $t$')
-ax[0].legend(loc='upper center', bbox_to_anchor=(0.5,1.53), frameon=False, fontsize=9)
+ax[0].legend(loc='upper center', bbox_to_anchor=(0.5,1.73), frameon=False, fontsize=9)
 
 
 codes = [[12,6],[14,7]]#,[18,6]]
@@ -131,7 +131,7 @@ for i, code in enumerate(codes):
     print(code, popt)
     xx = np.linspace(2, 80, 1000)
     yy = fun(xx, *popt)
-    ax[1].plot(xx, yy, c=colors[i], linewidth=0.75)
+    ax[1].plot(xx, yy, c=colors[i], linewidth=1)
 
 if x10:
     plot_surface_data_10x(ax[1], 5, 12)
@@ -146,7 +146,7 @@ else:
 
 ax[1].set_yscale('log')
 ax[1].set_xlabel('Rounds, $t$')
-ax[1].legend(loc='upper center', bbox_to_anchor=(0.5,1.35), frameon=False, fontsize=9)
+ax[1].legend(loc='upper center', bbox_to_anchor=(0.5,1.5), frameon=False, fontsize=9)
 
 # handles, labels = plt.gca().get_legend_handles_labels()
 # order = [3,2,1,0]
@@ -219,11 +219,11 @@ for i, code in enumerate(codes):
     print(code, popt)
     xx = np.linspace(2, 80, 1000)
     yy = fun(xx, *popt)
-    ax[2].plot(xx, yy, c=colors[i], linewidth=0.75)
+    ax[2].plot(xx, yy, c=colors[i], linewidth=1)
 
 ax[2].set_yscale('log')
 ax[2].set_xlabel('Rounds, $t$')
-ax[2].legend(loc='upper center', bbox_to_anchor=(0.5,1.29), frameon=False, fontsize=9)
+ax[2].legend(loc='upper center', bbox_to_anchor=(0.5,1.42), frameon=False, fontsize=9)
 
 # https://stackoverflow.com/questions/4700614/how-to-put-the-legend-outside-the-plot
 
