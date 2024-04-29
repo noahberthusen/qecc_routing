@@ -10,9 +10,12 @@ from ldpc import bposd_decoder
 from result import Result, save_new_res, res_to_line
 from tqdm import tqdm
 
+full_path = os.path.realpath(__file__)
+path, filename = os.path.split(full_path)
+
 # k = 8
 # code = [12,3,9,1,2,0,1,11,3,12,2,0,11,6]
-#code = [9,5,8,4,1,5,8,7,5,9,2,1,9,5]
+code = [9,5,8,4,1,5,8,7,5,9,2,1,9,5]
 # code = [12,5,10,4,1,0,1,2,5,12,2,0,11,6]
 #code = [15,5,5,2,3,2,7,6,15,5,0,4,11,6]
 #code = [30,3,25,3,1,3,22,13,3,30,3,4,11,9]
@@ -22,7 +25,7 @@ from tqdm import tqdm
 #code = [18,6,3,4,5,3,7,2,6,18,1,4,16,15]
 # code = [12,6,3,1,2,3,1,2,12,6,1,4,16,15]
 
-code = [14,7,3,5,2,7,6,9,7,14,3,3,11,5]
+# code = [14,7,3,5,2,7,6,9,7,14,3,3,11,5]
 
 # k = 16
 #code = [15,5,10,3,2,0,9,7,5,15,3,4,16,15]
@@ -436,13 +439,13 @@ class Simulation:
 
 
 lr_time = 5
-res_file_name = f"./results/{ell}_{m}/10xfull_circuit_results_{lr_time}_laptop.res"
+res_file_name = os.path.join(path, f"./results/{ell}_{m}/10xfull_circuit_results_{lr_time}_laptop.res")
 rs = []
 
 num_iters = 1000001
 p_mask = len(lr_x_checks)/Hx.shape[0]
 
-for T in range(5, 6, 10):
+for T in range(20, 21, 10):
     rs = []
 
     for ii in tqdm(range(num_iters)):

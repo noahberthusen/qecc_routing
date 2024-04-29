@@ -22,7 +22,7 @@ def plot_surface_data_10x(ax, d, k):
         6: 'D',
         7: '^'
     }
-    ax.plot(ts, [1-(1-a)**k for a in data[d]], labels[d], c='k', markersize=4, label=f"Surface code: [[{d**2*k},{k},{d}]] ({(2*d**2-1)*k} qubits)")
+    ax.plot(ts, [1-(1-a)**k for a in data[d]], labels[d], c='k', markersize=4, label=f"Surface: [[{d**2*k},{k},{d}]] ({(2*d**2-1)*k} qubits)")
     popt, pcov = curve_fit(fun, ts, [1-(1-a)**k for a in data[d]], maxfev=1000, p0=(0.001))
     print(d, k, popt)
     xx = np.linspace(2, 80, 1000)
@@ -81,7 +81,7 @@ for i, code in enumerate(codes):
     # colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
     tmp_df = df[(df['p_std_dev'] > 0) & (df['p_phys'] == 0.0002) & (df['k'] == 8)]
 
-    ax[0].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', c=colors[i], markersize=5, label=f"Quasi-cyclic: [[{code[0]*code[1]*2},8,{ds[i]}]] ({code[0]*code[1]*8} qubits)")
+    ax[0].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', c=colors[i], markersize=5, label=f"BB: [[{code[0]*code[1]*2},8,{ds[i]}]] ({code[0]*code[1]*8} qubits)")
     popt, pcov = curve_fit(fun, tmp_df['t'], tmp_df['p_error'], maxfev=1000, p0=(0.001), sigma=tmp_df['p_std_dev'])
     print(code, popt)
     xx = np.linspace(2, 80, 1000)
@@ -126,7 +126,7 @@ for i, code in enumerate(codes):
 
     tmp_df = df[(df['p_std_dev'] > 0) & (df['p_phys'] == 0.0002) & (df['k'] == 12) & (df['a1'] == arr[i])]
 
-    ax[1].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], c=colors[i], markersize=5, fmt='o', label=f"Quasi-cyclic: [[{code[0]*code[1]*2},12,{ds[i]}]] ({code[0]*code[1]*8} qubits)")
+    ax[1].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], c=colors[i], markersize=5, fmt='o', label=f"BB: [[{code[0]*code[1]*2},12,{ds[i]}]] ({code[0]*code[1]*8} qubits)")
     popt, pcov = curve_fit(fun, tmp_df['t'], tmp_df['p_error'], maxfev=1000, p0=(0.001), sigma=tmp_df['p_std_dev'])
     print(code, popt)
     xx = np.linspace(2, 80, 1000)
@@ -191,7 +191,7 @@ ax[1].legend(loc='upper center', bbox_to_anchor=(0.5,1.5), frameon=False, fontsi
 # codes = [[12,5],[12,5],[9,5],[9,5]]
 codes = [[9,5],[9,5],[14,7],[14,7]]
 arr = [8,8,6,6]
-ds = [8,8,8,8]
+ds = [6,6,8,8]
 ks = [8,8,12,12]
 
 lr_round = [1,5,1,5]
@@ -214,7 +214,7 @@ for i, code in enumerate(codes):
     tmp_df = df[(df['p_std_dev'] > 0) & (df['p_phys'] == 0.0002) & (df['a1'] == arr[i])]
 
 
-    ax[2].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', c=colors[i], markersize=5, label=f"Quasi-cyclic: [[{code[0]*code[1]*2},{ks[i]},{ds[i]}]] (Every {lr_round[i]} round(s))")
+    ax[2].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', c=colors[i], markersize=5, label=f"BB: [[{code[0]*code[1]*2},{ks[i]},{ds[i]}]] (Every {lr_round[i]} round(s))")
     popt, pcov = curve_fit(fun, tmp_df['t'], tmp_df['p_error'], maxfev=1000, p0=(0.001), sigma=tmp_df['p_std_dev'])
     print(code, popt)
     xx = np.linspace(2, 80, 1000)
@@ -232,4 +232,5 @@ for i, label in enumerate(('(a)', '(b)', '(c)')):
     ax[i].text(-0.05, 1.08, label, transform=ax[i].transAxes,
       fontsize=14, va='top', ha='right')
 
+# plt.show()
 plt.savefig(os.path.join(path, f'../sim_results.png'), dpi=1000, transparent=False, bbox_inches='tight')
