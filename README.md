@@ -27,6 +27,7 @@ Code used to perform the circuit-level simulations of the bivariate bicycle code
 - `general.py` Main driver file for the circuit-level simulations as defined in Section IV of the paper. To simulate a BB code, the user inputs its $A$ and $B$ polynomials, embedding parameters, and (short- and long-range) routing depth. The latter of which can be determine with the code in `/routing`. Circuit-level simulations powered by [Stim](https://github.com/quantumlib/Stim) are then performed for a user-defined number of rounds, with the long-range generators being measured every `lr_time` rounds.
 - `mec.py` Calculates the minimal enclosing circle of a set of $(x,y)$ points.
 - `result.py` Handles the format and saving of the simulation results.
+- `teleportation.py` Performs circuit-level simulations of the Bell pair purification and application of the long-range CNOT gate. The user can specify the length of the long-range CNOT to perform, and then the purification process as described in Section IVB is performed. This file was used to generate the data presented in Fig. 6(a).
 
 #### Routing simulations
 
