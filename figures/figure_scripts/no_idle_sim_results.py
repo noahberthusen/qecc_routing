@@ -26,13 +26,13 @@ def plot_surface_data_10x(ax, d, k):
         7: '^',
         8: 'x'
     }
-    ax.plot(ts, [1-(1-a)**k for a in data[d]], labels[d], c='k', markersize=4, label=f"Surface: [[{d**2*k},{k},{d}]] ({(2*d**2-1)*k} qubits)")
+    ax.plot(ts, [1-(1-a)**k for a in data[d]], labels[d], c='k', markersize=3, label=f"Surface: [[{d**2*k},{k},{d}]] ({(2*d**2-1)*k} qubits)")
     popt, pcov = curve_fit(fun, ts, [1-(1-a)**k for a in data[d]], maxfev=1000, p0=(0.001))
-    print(d, k, popt)
+    print(d, k, popt, np.sqrt(pcov))
     xx = np.linspace(2, 80, 1000)
     # ax.fill_between(xx, fun(xx, *popt-np.sqrt(pcov)), fun(xx, *popt+np.sqrt(pcov)), color='k', alpha=1, linewidth=1)
     yy = fun(xx, *popt)
-    ax.plot(xx, yy, c='k', linewidth=1)
+    ax.plot(xx, yy, c='k', linewidth=0.75)
 
 def plot_surface_data(ax, d, k):
     ts = [10,20,30,40,50,60,70,80,90,100]
@@ -83,9 +83,9 @@ else:
 
 for i, code in enumerate(codes):
     if x10:
-        df = pd.read_csv(os.path.join(path, f'../../src_py/quasi-cyclic/results/{code[0]}_{code[1]}/10xfull_circuit_results_5.res'))
+        df = pd.read_csv(os.path.join(path, f'../../src_py/bivariate-bicycle/results/{code[0]}_{code[1]}/10xfull_circuit_results_5.res'))
     else:
-        df = pd.read_csv(os.path.join(path, f'../../src_py/quasi-cyclic/results/{code[0]}_{code[1]}/full_circuit_results_5.res'))
+        df = pd.read_csv(os.path.join(path, f'../../src_py/bivariate-bicycle/results/{code[0]}_{code[1]}/full_circuit_results_5.res'))
     df['p_error'] = 1 - df['p_log']
     df['p_std_dev'] = np.sqrt(df['p_error'] * df['p_log'] / df['no_test'])
     # df['p_std_dev'].replace(to_replace=0, value=1e-2, inplace=True)
@@ -98,13 +98,14 @@ for i, code in enumerate(codes):
     # colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
     tmp_df = df[(df['p_std_dev'] > 0) & (df['p_phys'] == 0.000) & (df['k'] == 8)]
 
-    ax.errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', c=colors[i], markersize=5, label=f"BB: [[{code[0]*code[1]*2},8,{ds[i]}]] ({code[0]*code[1]*8} qubits)")
+    ax.errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', elinewidth=1.5,
+                c=colors[i], markersize=3, label=f"BB: [[{code[0]*code[1]*2},8,{ds[i]}]] ({code[0]*code[1]*8} qubits)")
     popt, pcov = curve_fit(fun, tmp_df['t'], tmp_df['p_error'], maxfev=1000, p0=(0.001), sigma=tmp_df['p_std_dev'])
     print(code, popt, np.sqrt(pcov))
     xx = np.linspace(2, 80, 1000)
     # ax.fill_between(xx, fun(xx, *popt-np.sqrt(pcov)), fun(xx, *popt+np.sqrt(pcov)), color=colors[i], alpha=0.5, linewidth=0)
     yy = fun(xx, *popt)
-    ax.plot(xx, yy, c=colors[i], linewidth=1)
+    ax.plot(xx, yy, c=colors[i], linewidth=0.75)
 
 
 

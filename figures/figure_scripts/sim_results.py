@@ -22,9 +22,9 @@ def plot_surface_data_10x(ax, d, k):
         6: 'D',
         7: '^'
     }
-    ax.plot(ts, [1-(1-a)**k for a in data[d]], labels[d], c='k', markersize=4, label=f"Surface: [[{d**2*k},{k},{d}]] ({(2*d**2-1)*k} qubits)")
+    ax.plot(ts, [1-(1-a)**k for a in data[d]], labels[d], c='k', markersize=3, label=f"Surface: [[{d**2*k},{k},{d}]] ({(2*d**2-1)*k} qubits)")
     popt, pcov = curve_fit(fun, ts, [1-(1-a)**k for a in data[d]], maxfev=1000, p0=(0.001))
-    print(d, k, popt)
+    print(d, k, popt, np.sqrt(pcov))
     xx = np.linspace(2, 80, 1000)
     yy = fun(xx, *popt)
     ax.plot(xx, yy, c='k', linewidth=1)
@@ -66,9 +66,9 @@ ds = [6,6,8,8]
 
 for i, code in enumerate(codes):
     if x10:
-        df = pd.read_csv(os.path.join(path, f'../../src_py/quasi-cyclic/results/{code[0]}_{code[1]}/10xfull_circuit_results_5.res'))
+        df = pd.read_csv(os.path.join(path, f'../../src_py/bivariate-bicycle/results/{code[0]}_{code[1]}/10xfull_circuit_results_5.res'))
     else:
-        df = pd.read_csv(os.path.join(path, f'../../src_py/quasi-cyclic/results/{code[0]}_{code[1]}/full_circuit_results_5.res'))
+        df = pd.read_csv(os.path.join(path, f'../../src_py/bivariate-bicycle/results/{code[0]}_{code[1]}/full_circuit_results_5.res'))
     df['p_error'] = 1 - df['p_log']
     df['p_std_dev'] = np.sqrt(df['p_error'] * df['p_log'] / df['no_test'])
     # df['p_std_dev'].replace(to_replace=0, value=1e-2, inplace=True)
@@ -81,9 +81,10 @@ for i, code in enumerate(codes):
     # colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
     tmp_df = df[(df['p_std_dev'] > 0) & (df['p_phys'] == 0.0002) & (df['k'] == 8)]
 
-    ax[0].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', c=colors[i], markersize=5, label=f"BB: [[{code[0]*code[1]*2},8,{ds[i]}]] ({code[0]*code[1]*8} qubits)")
+    ax[0].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', c=colors[i], markersize=3, elinewidth=1.5,
+                   label=f"BB: [[{code[0]*code[1]*2},8,{ds[i]}]] ({code[0]*code[1]*8} qubits)")
     popt, pcov = curve_fit(fun, tmp_df['t'], tmp_df['p_error'], maxfev=1000, p0=(0.001), sigma=tmp_df['p_std_dev'])
-    print(code, popt)
+    print(code, popt, np.sqrt(pcov))
     xx = np.linspace(2, 80, 1000)
     yy = fun(xx, *popt)
     ax[0].plot(xx, yy, c=colors[i], linewidth=1)
@@ -112,9 +113,9 @@ ds = [12,8]
 
 for i, code in enumerate(codes):
     if x10:
-        df = pd.read_csv(os.path.join(path, f'../../src_py/quasi-cyclic/results/{code[0]}_{code[1]}/10xfull_circuit_results_5.res'))
+        df = pd.read_csv(os.path.join(path, f'../../src_py/bivariate-bicycle/results/{code[0]}_{code[1]}/10xfull_circuit_results_5.res'))
     else:
-        df = pd.read_csv(os.path.join(path, f'../../src_py/quasi-cyclic/results/{code[0]}_{code[1]}/full_circuit_results_5.res'))
+        df = pd.read_csv(os.path.join(path, f'../../src_py/bivariate-bicycle/results/{code[0]}_{code[1]}/full_circuit_results_5.res'))
     df['p_error'] = 1 - df['p_log']
     df['p_std_dev'] = np.sqrt(df['p_error'] * df['p_log'] / df['no_test'])
     # df['p_std_dev'].replace(to_replace=0, value=1e-2, inplace=True)
@@ -126,9 +127,10 @@ for i, code in enumerate(codes):
 
     tmp_df = df[(df['p_std_dev'] > 0) & (df['p_phys'] == 0.0002) & (df['k'] == 12) & (df['a1'] == arr[i])]
 
-    ax[1].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], c=colors[i], markersize=5, fmt='o', label=f"BB: [[{code[0]*code[1]*2},12,{ds[i]}]] ({code[0]*code[1]*8} qubits)")
+    ax[1].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], c=colors[i], markersize=3, fmt='o', elinewidth=1.5,
+                   label=f"BB: [[{code[0]*code[1]*2},12,{ds[i]}]] ({code[0]*code[1]*8} qubits)")
     popt, pcov = curve_fit(fun, tmp_df['t'], tmp_df['p_error'], maxfev=1000, p0=(0.001), sigma=tmp_df['p_std_dev'])
-    print(code, popt)
+    print(code, popt, np.sqrt(pcov))
     xx = np.linspace(2, 80, 1000)
     yy = fun(xx, *popt)
     ax[1].plot(xx, yy, c=colors[i], linewidth=1)
@@ -157,9 +159,9 @@ ax[1].legend(loc='upper center', bbox_to_anchor=(0.5,1.5), frameon=False, fontsi
 
 # for code in codes:
 #     if x10:
-#         df = pd.read_csv(os.path.join(path, f'../../src_py/quasi-cyclic/results/{code[0]}_{code[1]}/10xfull_circuit_results_5.res'))
+#         df = pd.read_csv(os.path.join(path, f'../../src_py/bivariate-bicycle/results/{code[0]}_{code[1]}/10xfull_circuit_results_5.res'))
 #     else:
-#         df = pd.read_csv(os.path.join(path, f'../../src_py/quasi-cyclic/results/{code[0]}_{code[1]}/full_circuit_results_5.res'))
+#         df = pd.read_csv(os.path.join(path, f'../../src_py/bivariate-bicycle/results/{code[0]}_{code[1]}/full_circuit_results_5.res'))
 #     df['p_error'] = 1 - df['p_log']
 #     df['p_std_dev'] = np.sqrt(df['p_error'] * df['p_log'] / df['no_test'])
 #     # df['p_std_dev'].replace(to_replace=0, value=1e-2, inplace=True)
@@ -175,7 +177,7 @@ ax[1].legend(loc='upper center', bbox_to_anchor=(0.5,1.5), frameon=False, fontsi
 #         # tmp_df_fit = df[(df['p_mask'] == j) & (df['algo'] >= 200)]
 #         # tmp_df_before = df[(df['p_mask'] == j) & (df['algo'] < 200) & (df['algo'] > 10)]
 
-#     ax[2].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', label=f"Quasi-cyclic: [[{code[0]*code[1]*2},16,d]] ({code[0]*code[1]*8} qubits)")
+#     ax[2].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', label=f"bivariate-bicycle: [[{code[0]*code[1]*2},16,d]] ({code[0]*code[1]*8} qubits)")
 # # ax.plot(ts, p_error, '-o', c='k', label="Surface code: [[712,8,6]]")
 
 # if x10:
@@ -198,9 +200,9 @@ lr_round = [1,5,1,5]
 
 for i, code in enumerate(codes):
     if x10:
-        df = pd.read_csv(os.path.join(path, f'../../src_py/quasi-cyclic/results/{code[0]}_{code[1]}/10xfull_circuit_results_{lr_round[i]}.res'))
+        df = pd.read_csv(os.path.join(path, f'../../src_py/bivariate-bicycle/results/{code[0]}_{code[1]}/10xfull_circuit_results_{lr_round[i]}.res'))
     else:
-        df = pd.read_csv(os.path.join(path, f'../../src_py/quasi-cyclic/results/{code[0]}_{code[1]}/full_circuit_results_{lr_round[i]}.res'))
+        df = pd.read_csv(os.path.join(path, f'../../src_py/bivariate-bicycle/results/{code[0]}_{code[1]}/full_circuit_results_{lr_round[i]}.res'))
 
     df['p_error'] = 1 - df['p_log']
     df['p_std_dev'] = np.sqrt(df['p_error'] * df['p_log'] / df['no_test'])
@@ -214,9 +216,10 @@ for i, code in enumerate(codes):
     tmp_df = df[(df['p_std_dev'] > 0) & (df['p_phys'] == 0.0002) & (df['a1'] == arr[i])]
 
 
-    ax[2].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', c=colors[i], markersize=5, label=f"BB: [[{code[0]*code[1]*2},{ks[i]},{ds[i]}]] (Every {lr_round[i]} round(s))")
+    ax[2].errorbar(tmp_df['t'], tmp_df['p_error'], tmp_df['p_std_dev'], fmt='o', c=colors[i], markersize=3, elinewidth=1.5,
+                   label=f"BB: [[{code[0]*code[1]*2},{ks[i]},{ds[i]}]] (Every {lr_round[i]} round(s))")
     popt, pcov = curve_fit(fun, tmp_df['t'], tmp_df['p_error'], maxfev=1000, p0=(0.001), sigma=tmp_df['p_std_dev'])
-    print(code, popt)
+    print(code, popt, np.sqrt(pcov))
     xx = np.linspace(2, 80, 1000)
     yy = fun(xx, *popt)
     ax[2].plot(xx, yy, c=colors[i], linewidth=1)

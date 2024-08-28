@@ -47,6 +47,13 @@ res1 = np.array([ # do generators with fewer qubits first
     # [9, 45, 18.02790404040404, 53.10227272727273]
 ])
 
+def fun(x, c):
+    return c*x
+
+ind = 8
+popt, pcov = curve_fit(fun, res1[:ind][:,2], res1[:ind][:,3])
+print(popt, np.sqrt(pcov))
+
 res2 = np.array([ # randomly shuffle generators
     [3, 6, 4.501243781094527, 10.432835820895523],
     [3, 7, 3.9285714285714284, 10.0],
