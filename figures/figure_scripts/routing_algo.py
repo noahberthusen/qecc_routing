@@ -89,6 +89,7 @@ plt.scatter(code_sizes, res[:,3], c=red, marker='o', s=30, label="Algorithm")
 plt.scatter(code_sizes, 2.5*res[:,2], c='k', marker='x', label="$2.5\cdot$"+"Theory bound")
 
 plt.xscale('log')
+plt.yscale('log')
 plt.legend(loc="upper left")
 plt.xlabel("Code size")
 plt.ylabel("Routing rounds")
